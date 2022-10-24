@@ -1,0 +1,74 @@
+.mainBackground {
+  background: linear-gradient(118.54deg, #D3CEDF 25.14%, #748DA6 91.66%);
+  border: 0
+}
+
+.titleBox {
+  margin: 3rem 4rem;
+  padding: 3rem;
+  height: 50rem;
+  
+  background: linear-gradient(95.8deg, rgba(116, 141, 166, 0.3) 45.93%, rgba(156, 180, 204, 0.3) 95.87%);
+  border-radius: 20px;
+}
+
+.appbartext {
+  color: #F1F1F1;
+  padding: 1rem;
+  font-size: 20px;
+}
+.appbartext:hover {
+  cursor: pointer;
+}
+
+.icons {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.icons:hover {
+  cursor: pointer;
+}
+
+.title {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 96px;
+  line-height: 120px;
+  padding: 1rem;
+
+  color: #F1F1F1;
+}
+
+.titleParagraph {
+  height: 95px;
+  padding: 3rem 1rem;
+
+  color: #F1F1F1;
+
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 30px;
+}
+
+.loadingImage {
+  padding-bottom: 100%;
+  background-color: #748DA6;
+}
+
+.aiImage {
+  border-radius: 4px;
+}
+.aiImage:hover {
+  cursor: pointer;
+}
+
+.searchBox {
+  width: 50rem;
+}
+
+.fav {
+  color: #F2D7D9
+}
