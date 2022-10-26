@@ -28,7 +28,7 @@ export class DynamoStack extends Stack {
     const imageTable = new Table(this, `${props.name}-ImageTable`, {
       tableName: `${props.name}-ImageTable`,
       partitionKey: {
-        name: `Id`,
+        name: `imageId`,
         type: AttributeType.STRING
       },
       billingMode: BillingMode.PAY_PER_REQUEST,
@@ -39,6 +39,22 @@ export class DynamoStack extends Stack {
     new CfnOutput(this, `${props.name}-imageTableName`, {
       value: imageTable.tableName,
       exportName: `${props.name}-imageTableName`
+    })
+
+    const productsTable = new Table(this, `${props.name}-productTable`, {
+      tableName: `${props.name}-ProductTable`,
+      partitionKey: {
+        name: `productId`,
+        type: AttributeType.STRING
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      stream: StreamViewType.NEW_IMAGE,
+      removalPolicy: RemovalPolicy.DESTROY
+    })
+
+    new CfnOutput(this, `${props.name}-productTableName`, {
+      value: productsTable.tableName,
+      exportName: `${props.name}-productTableName`
     })
   }
 }

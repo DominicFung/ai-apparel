@@ -15,11 +15,12 @@ import aiimage5 from '../imgs/home/aiimage5.jpeg'
 
 import { GetServiceImageData } from './api/[userId]/replicate/stablediffusion/[serviceId]'
 import { ReplicateSDResponse, RequestProps } from './api/[userId]/replicate/stablediffusion/generate'
+import Link from 'next/link'
 
 const NUM_IMAGES = 3
 
 const Home: NextPage = () => {
-  const [prompt, setPrompt] = useState("Obama as a cartoon caracter.")
+  const [prompt, setPrompt] = useState("Monstera in the style of Art Nouveau.")
 
   const [images, setImages] = useState<GetServiceImageData[]>([])
   const [generateResult, setGenerateResult] = useState<ReplicateSDResponse[]>([])
@@ -46,7 +47,7 @@ const Home: NextPage = () => {
     let url = `/api/userid/replicate/stablediffusion/${serviceId}`
     let response = await (await fetch(url)).json() as GetServiceImageData
     if (response.status === 'PROCESSING') { 
-      setTimeout( reloadImage, 600+(Math.random()*500), serviceId, index )
+      setTimeout( reloadImage, 1600+(Math.random()*500), serviceId, index )
     }
     
     images[index] = response
@@ -87,7 +88,7 @@ const Home: NextPage = () => {
               <div className={`${styles.title}`}>Print your AI Design</div>
               <p className={`${styles.titleParagraph}`}>This is a paragraph that describes how this product works.</p>
             </div>
-            <div className='grid grid-cols-3 py-10 gap-1'>
+            <div className='sm:hidden md:grid xl:grid-cols-3 md:grid-cols-2 py-10 gap-1'>
               <span><Image src={aiimage2} objectFit={'contain'}/></span>
               <span><Image src={aiimage3} objectFit={'contain'}/></span>
               <span><Image src={aiimage4} objectFit={'contain'}/></span>
@@ -137,12 +138,17 @@ const Home: NextPage = () => {
           <div className='grid grid-cols-3 gap-3 px-20 py-2'>
             {images.map((i, e) => {
               if (i && i.status === 'COMPLETE' && i.url) {
-                return <span key={i.id} className={styles.aiImage}>
-                  <Image src={i.url} width={512} height={512} objectFit={'contain'}/>
-                  <span className="relative" style={{top: "-2.5rem", right: "-17rem"}}>
-                    <HeartIcon className={`${styles.fav} w-6 h-6`} />
+                return (
+                <Link href={`products/1090/item/${i.id}`}>
+                  <span key={i.id} className={styles.aiImage}>
+                    <div style={{height: 0}}>
+                      <span className="relative" style={{top: 500, left: 500}}>
+                        <HeartIcon className={`${styles.fav} w-6 h-6`} />
+                      </span>
+                    </div>
+                    <Image src={i.url} width={512} height={512} objectFit={'contain'}/>
                   </span>
-                </span>
+                </Link>)
               } else {
                 return <div key={e} className={styles.loadingImage} />
               }
