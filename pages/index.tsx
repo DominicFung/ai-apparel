@@ -139,8 +139,8 @@ const Home: NextPage = () => {
             {images.map((i, e) => {
               if (i && i.status === 'COMPLETE' && i.url) {
                 return (
-                <Link href={`products/1090/item/${i.id}`}>
-                  <span key={i.id} className={styles.aiImage}>
+                <Link href={`products/1090/item/${i.id}`} key={i.id}>
+                  <span className={styles.aiImage}>
                     <div style={{height: 0}}>
                       <span className="relative" style={{top: 500, left: 500}}>
                         <HeartIcon className={`${styles.fav} w-6 h-6`} />

@@ -145,7 +145,7 @@ const Item: NextPage = () => {
                     top: twSize === 'xs' ? "" : storeItem?.images[pictureIndex].location[twSize].top, 
                     left: twSize === 'xs' ? "" : storeItem?.images[pictureIndex].location[twSize].left, 
                   }}>
-                    <Image src={image.url} width={256} height={256} objectFit={'contain'}/>
+                    <Image src={image.url} alt={"ai image"} width={256} height={256} objectFit={'contain'}/>
                   </span>
                 </div> }
                 <div style={{backgroundImage: `url(${focusPictureUrl}), url(${storeItem?.images ? storeItem?.images[pictureIndex].full : ""})`, backgroundColor: "#748DA6"}}
@@ -222,7 +222,8 @@ const Item: NextPage = () => {
                     {
                       storeItem?.colors.map((v, i) => {
                         return (
-                          <span className="rounded-full h-8 w-8 mr-1 inline-flex items-center justify-center border-2 border-white hover:border-gray-200"
+                          <span key={i}
+                            className="rounded-full h-8 w-8 mr-1 inline-flex items-center justify-center border-2 border-white hover:border-gray-200"
                             style={{backgroundColor: v||"", borderColor: colorChoices[tab]===i?v||"":""}}  
                             onClick={() => { 
                               colorChoices[tab] = i
