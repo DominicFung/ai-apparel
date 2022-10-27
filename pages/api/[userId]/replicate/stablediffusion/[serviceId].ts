@@ -9,6 +9,9 @@ import { ReplicateSDResponse } from './generate'
 import secret from '../../../../../secret.json'
 import cdk from '../../../../../cdk-outputs.json'
 
+import { Amplify, withSSRContext } from "aws-amplify"
+Amplify.configure({ ssr: true })
+
 export interface GetServiceImageData {
   id: string
   status: "COMPLETE" | "PROCESSING" | "ERROR"

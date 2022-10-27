@@ -6,6 +6,9 @@ import { got } from 'got'
 import secret from '../../../../../secret.json'
 import cdk from '../../../../../cdk-outputs.json'
 
+import { Amplify, withSSRContext } from "aws-amplify"
+Amplify.configure({ ssr: true })
+
 export interface RequestProps {
   num_executions: number,
   userId: string,
