@@ -5,6 +5,11 @@ import  { unmarshall } from "@aws-sdk/util-dynamodb"
 
 import cdk from '../../../cdk-outputs.json'
 
+import config from "../../../src/aws-exports"
+
+import { Amplify, withSSRContext } from "aws-amplify"
+Amplify.configure({...config, ssr: true })
+
 export interface Product {
   productId: string /** same as for platform */
   platform: 'gelato'|'printful'|'printify',
