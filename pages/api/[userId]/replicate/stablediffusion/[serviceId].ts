@@ -11,7 +11,7 @@ import cdk from '../../../../../cdk-outputs.json'
 
 import config from "../../../../../src/aws-exports"
 
-import { Amplify, withSSRContext } from "aws-amplify"
+import { Amplify } from "aws-amplify"
 Amplify.configure({...config, ssr: true })
 
 export interface GetServiceImageData {
@@ -30,10 +30,24 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<G
   let config = {} as DynamoDBClientConfig
   console.log(process.env.AWS_PROFILE)
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
+  else { 
+    config["credentials"] = { 
+      accessKeyId: cdk["AIApparel-IamStack"].AccessKey, 
+      secretAccessKey: cdk["AIApparel-IamStack"].SecretKey 
+    }
+    config.region = 'us-east-1'
+  }
   let client = new DynamoDBClient(config)
   
   let s3Config = {} as S3ClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
+  else { 
+    s3Config["credentials"] = { 
+      accessKeyId: cdk["AIApparel-IamStack"].AccessKey, 
+      secretAccessKey: cdk["AIApparel-IamStack"].SecretKey 
+    }
+    s3Config.region = 'us-east-1'
+  }
   let s3 = new S3Client(s3Config)
 
   let promise = []

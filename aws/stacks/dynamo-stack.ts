@@ -25,6 +25,11 @@ export class DynamoStack extends Stack {
       exportName: `${props.name}-aiServiceTableName`
     })
 
+    new CfnOutput(this, `${props.name}-aiServiceTableArn`, {
+      value: aiServiceTable.tableArn,
+      exportName: `${props.name}-aiServiceTableArn`
+    })
+
     const imageTable = new Table(this, `${props.name}-ImageTable`, {
       tableName: `${props.name}-ImageTable`,
       partitionKey: {
@@ -55,6 +60,11 @@ export class DynamoStack extends Stack {
     new CfnOutput(this, `${props.name}-productTableName`, {
       value: productsTable.tableName,
       exportName: `${props.name}-productTableName`
+    })
+
+    new CfnOutput(this, `${props.name}-productTableArn`, {
+      value: productsTable.tableArn,
+      exportName: `${props.name}-productTableArn`
     })
   }
 }

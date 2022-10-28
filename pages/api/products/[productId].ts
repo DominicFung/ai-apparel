@@ -67,6 +67,13 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
   let config = {} as DynamoDBClientConfig
   console.log(process.env.AWS_PROFILE)
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
+  else { 
+    config["credentials"] = { 
+      accessKeyId: cdk["AIApparel-IamStack"].AccessKey, 
+      secretAccessKey: cdk["AIApparel-IamStack"].SecretKey 
+    }
+    config.region = 'us-east-1'
+  }
   let client = new DynamoDBClient(config)
 
   let command = new GetItemCommand({
