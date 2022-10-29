@@ -8,7 +8,7 @@ import cdk from '../../../../../cdk-outputs.json'
 
 import config from "../../../../../src/aws-exports"
 
-import { Amplify, withSSRContext } from "aws-amplify"
+import { Amplify } from "aws-amplify"
 Amplify.configure({...config, ssr: true })
 
 export interface RequestProps {
@@ -49,8 +49,6 @@ export interface ReplicateSDResponse {
 }
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<ReplicateSDResponse[]>) {
-  console.log(req.query)
-  console.log(req.body)
   let b = req.body as RequestProps
 
   let config = {} as DynamoDBClientConfig

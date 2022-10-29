@@ -11,6 +11,8 @@ import { storeItems } from '../../../../utils/localstorage'
 import { GetServiceImageData } from '../../../api/[userId]/replicate/stablediffusion/[serviceId]'
 import { Product } from '../../../api/products/[productId]'
 import { GelatoOrder } from '../../../api/[userId]/gelato/order'
+import { GetProviderCostRequest, UserVariant } from '../../../api/[userId]/printify/getprice'
+import { MARKUP_MULTIPLIER } from '../../../api/[userId]/printify/createProduct'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 const TAILWIND_SIZE = {
@@ -44,8 +46,6 @@ const Item: NextPage = () => {
   const [ twSize, setTwSize ] = useState<'xl'|'2xl'|'lg'|'md'|'sm'|"xs">('xl')
 
   const handleResize = () => {
-    // if (window.innerWidth <= TAILWIND_SIZE['sm']) { setTwSize('sm'); return }
-
     if (window.innerWidth >= TAILWIND_SIZE['2xl']) { setTwSize('2xl'); console.log('2xl'); return }
     if (window.innerWidth >= TAILWIND_SIZE['xl']) { setTwSize('xl'); console.log('xl'); return }
     if (window.innerWidth >= TAILWIND_SIZE['lg']) { setTwSize('lg'); console.log('lg'); return }
@@ -68,6 +68,35 @@ const Item: NextPage = () => {
     let url = `/api/products/${productId}`
     let response = await (await fetch(url)).json() as Product
     setStoreItem(response)
+    getCostPerVarient(response)
+  }
+
+  const getCostPerVarient = async (product: Product) => {
+    if (product.platform === "printify") {
+      let geourl = `https://api.ipify.org?format=json`
+      let geo = await (await fetch(geourl)).json() as {ip: string}
+      console.log(geo)
+
+      let url = `/api/userId/printify/getprice`
+      let productId =Number(product.productId)
+      console.log(productId)
+      let response = await (await fetch(url, {
+        method: "POST",
+        body: JSON.stringify({
+          blueprintId: productId,
+          ip: geo.ip
+        } as GetProviderCostRequest)
+      })).json() as UserVariant[]
+
+      /** 
+       * For now we will assume first varient is the only variant of the product.
+       * variant should mean size and/or colour
+      */
+      product.price = response[0].firstItem.cost
+      console.log(product.price)
+      setStoreItem({...product})
+    }
+    
   }
 
   const incrementQuantity = () => {

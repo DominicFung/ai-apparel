@@ -23,12 +23,10 @@ export interface GetServiceImageData {
 // returns s3 location link
 // https://api.replicate.com/v1/predictions/jfxln7xypfd27fbzmnai3r7dmy
 export default async function handler(req: NextApiRequest,res: NextApiResponse<GetServiceImageData>) {
-  console.log(req.query)
   const userId = req.query.userId as string
   const serviceId = req.query.serviceId as string
 
   let config = {} as DynamoDBClientConfig
-  console.log(process.env.AWS_PROFILE)
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
   else { 
     config["credentials"] = { 
@@ -55,14 +53,12 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<G
   let result = await got.get(`https://api.replicate.com/v1/predictions/${serviceId}`, {
     headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
   }).json() as ReplicateSDResponse
-  console.log(result)
 
   if (result.output && result.output.length > 0) {
     let img = await got.get(result.output[0], {
       headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
     })
 
-    console.log(img.rawBody)
     const s3Command = new PutObjectCommand({
       Bucket: cdk["AIApparel-S3Stack"].bucketName,
       Key: `public/${userId}/prompts/${serviceId}/original.jpg`,
