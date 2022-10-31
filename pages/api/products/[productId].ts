@@ -16,10 +16,7 @@ export interface Product {
   type: 'shirt' | 'tote',
   title: string
   description: string
-  price: number
-  currency: 'CAN'
   images: ProductImages[]
-  colors: string[]
 }
 
 export interface ProductImages {

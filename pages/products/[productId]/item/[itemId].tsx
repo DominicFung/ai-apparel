@@ -5,16 +5,15 @@ import type { NextPage } from 'next'
 import Image from 'next/image'
 import styles from '../../../../styles/Item.module.scss'
 
-import { v4 } from 'uuid'
-
-import { storeItems } from '../../../../utils/localstorage'
 import { GetServiceImageData } from '../../../api/[userId]/replicate/stablediffusion/[serviceId]'
 import { Product } from '../../../api/products/[productId]'
-import { GelatoOrder } from '../../../api/[userId]/gelato/order'
-import { GetProviderCostRequest, UserVariant } from '../../../api/[userId]/printify/getprice'
-import { MARKUP_MULTIPLIER } from '../../../api/[userId]/printify/createProduct'
+import { GetProviderCostRequest, ProviderLocationVariant, PrintProvider } from '../../../api/[userId]/printify/getprice'
+import Drawer from '../../../../components/drawer'
+import Payment from '../../../../components/payment'
+import { LineItem, OrderItem, SingleItemRequest } from '../../../api/[userId]/printify/order/single'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
+// http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
 const TAILWIND_SIZE = {
   '2xl': 1536,
   'xl': 1280,
@@ -23,6 +22,13 @@ const TAILWIND_SIZE = {
   'sm': 640
 }
 
+const COL_MAP = {
+  'Natural': "#F6EAD2"
+}
+
+interface Sizes {
+  [size: string]: { variantId: number, color: string }[]
+}
 
 const Item: NextPage = () => {
   const router = useRouter()
@@ -31,19 +37,29 @@ const Item: NextPage = () => {
   const [image, setImage] = useState<GetServiceImageData>()
   const [storeItem, setStoreItem] = useState<Product>()
 
+  const [providerVariant, setProviderVariant] = useState<ProviderLocationVariant>()
+
+  //** Belongs to storeItem */
+  const [ price, setPrice ] = useState(0)
+  const [ currency, setCurrency ] = useState('USD')
+  const [ sizes, setSizes ] = useState<Sizes>({}) // Key to menu, if size change, colors change
+  const [ colors, setColors ] = useState<string[]>([])
+
   const [ pictureIndex, setPicutreIndex] = useState(0)
-  const [ focusPictureUrl, setFocusPictureUrl ] = useState("")
 
   const [ quantityText, setQuantityText ] = useState("1")
   const [ quantity, setQuantity ] = useState(1)
   const [ tab, setTab ] = useState(0)
 
+  const [ sizeChoices, setSizeChoices ] = useState<string[]>([])
   const [ colorChoices, setColorChoices ] = useState<number[]>([0])
-  const [ customTexts, setCustomTexts ] = useState<string[]>([""])
   const [ customInstructions, setCustomInstructions ] = useState<string[]>([""])
 
   const [ isUpdateCart, setIsUpdateCart ] = useState(false)
   const [ twSize, setTwSize ] = useState<'xl'|'2xl'|'lg'|'md'|'sm'|"xs">('xl')
+
+  const [ paymentDrawerOpen, setPaymentDrawerOpen ] = useState(false)
+  const [ orderItem, setOrderItem ] = useState<OrderItem>()
 
   const handleResize = () => {
     if (window.innerWidth >= TAILWIND_SIZE['2xl']) { setTwSize('2xl'); console.log('2xl'); return }
@@ -86,17 +102,40 @@ const Item: NextPage = () => {
           blueprintId: productId,
           ip: geo.ip
         } as GetProviderCostRequest)
-      })).json() as UserVariant[]
+      })).json() as ProviderLocationVariant
+
+      setProviderVariant(response)
 
       /** 
-       * For now we will assume first varient is the only variant of the product.
-       * variant should mean size and/or colour
-      */
-      product.price = response[0].firstItem.cost
-      console.log(product.price)
-      setStoreItem({...product})
+       * List all variants for user, this will be a size based menu. 
+       * Each size must be UNIQUE. We're going to generate a new key structure.*/
+      let sizes: Sizes = {}
+      let colors: string[] = []
+      for (let v of response.locationVariant) {
+        if (!Object.keys(sizes).includes(v.options.size)) {
+          sizes[v.options.size] = []
+        }
+
+        if (!colors.includes(v.options.color)) {
+          if (Object.keys(COL_MAP).includes(v.options.color)) {
+            colors.push(COL_MAP[v.options.color])
+          } else colors.push(v.options.color)
+        }
+
+        if (Object.keys(COL_MAP).includes(v.options.color)) 
+          sizes[v.options.size].push({variantId: v.id, color: COL_MAP[v.options.color]})
+        else sizes[v.options.size].push({variantId: v.id, color: v.options.color})
+      }
+      setSizes(sizes)
+      setColors(colors)
+
+      let iks = Object.keys(sizes)[0]
+      setSizeChoices([iks])
+
+      let variant = response.locationVariant[0]
+      setPrice(variant.firstCost)
+      setCurrency(variant.currency)
     }
-    
   }
 
   const incrementQuantity = () => {
@@ -113,23 +152,100 @@ const Item: NextPage = () => {
     else { console.warn(`quanity is NAN: ${i}`) }
   }
 
-  const addToCart = (si: Product, cc: number[], ct: string[], ai: string[]) => {
-    let cartItems: GelatoOrder[] = []
-    for (let i=0; i<colorChoices.length; i++) {
-      cartItems.push({
-        orderId: `aiapparel-${v4()}`,
-        productId: productId,
-        purchasePrice: si.price,
-        color: si.colors[cc[i]],
-        text: ct[i],
-        additionalInstructions: ai[i],
-      } as GelatoOrder)
+  useEffect(() => {
+    let i = parseInt(quantityText)
+    if (i) { 
+      setQuantity(i) 
+      if (tab >= i) { setTab(i-1) }
+
+      let oldLen = colorChoices.length
+      let dif = i - oldLen
+
+      if (dif > 0)
+        for (let a=0; a<dif; a++) {
+          colorChoices.push(0)
+          sizeChoices.push(Object.keys(sizes)[0])
+          customInstructions.push("")
+        }
+      else if (dif < 0)
+        for (let a=0; a>dif; a--) {
+          colorChoices.pop()
+          customInstructions.pop()
+        }
+      else console.log("No change in i value. OK")
+
+      setColorChoices(colorChoices)
+      setSizeChoices(sizeChoices)
+      setCustomInstructions(customInstructions)
+
+    } else { console.warn(`quanity is NAN: ${i}`) }
+  }, [quantityText])
+
+  const buyNow = async () => {
+    let dynamicProgramming = {} as { [key: string]: LineItem }
+    for (let i=0; i<quantity; i++) {
+      let s=sizeChoices[i], c="", vid=0
+      for (let size of sizes[s]) {
+        if (size.color === colors[colorChoices[i]]) {
+          c = size.color; vid = size.variantId; break
+        }
+      }
+
+      let key = `${s}::::${c}`
+
+      if (dynamicProgramming[key]) {
+        dynamicProgramming[key].quantity += 1
+      } else {
+        dynamicProgramming[key] = {
+          variantId: vid,
+          printAreas: { front: "" },
+          quantity: 1
+        } as LineItem
+      }
     }
 
-    console.log(`storing cart items: ${JSON.stringify(cartItems)}`)
-    setIsUpdateCart(true)
-    storeItems(si.productId, cartItems)
+    let lineItems: LineItem[] = []
+    for (let d of Object.keys(dynamicProgramming)) {
+      lineItems.push(dynamicProgramming[d])
+    }
+    
+    let orderItem = {
+      productId: productId as string,
+      printProviderId: providerVariant?.id.toString(),
+      varients: providerVariant?.locationVariant,
+      choice: lineItems
+    } as SingleItemRequest
+
+    let url = `/api/userId/printify/order/single`
+    let response = await (await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(orderItem)
+    })).json() as OrderItem
+
+    if (response) {
+      console.log(response)
+      setOrderItem(response)
+      setPaymentDrawerOpen(true)
+    } else console.error("ERROR, buy now no response.")
   }
+
+  // const addToCart = (si: Product, cc: number[], ct: string[], ai: string[]) => {
+  //   let cartItems: GelatoOrder[] = []
+  //   for (let i=0; i<colorChoices.length; i++) {
+  //     cartItems.push({
+  //       orderId: `aiapparel-${v4()}`,
+  //       productId: productId,
+  //       purchasePrice: si.price,
+  //       color: si.colors[cc[i]],
+  //       text: ct[i],
+  //       additionalInstructions: ai[i],
+  //     } as GelatoOrder)
+  //   }
+
+  //   console.log(`storing cart items: ${JSON.stringify(cartItems)}`)
+  //   setIsUpdateCart(true)
+  //   storeItems(si.productId, cartItems)
+  // }
   
   useEffect(() => {
     if (productId && itemId) {
@@ -146,6 +262,9 @@ const Item: NextPage = () => {
 
 
   return (<>
+    <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
+      <Payment />
+    </Drawer>
     <div className={`${styles.mainBackground} w-full p-4 pt-32 flex justify-center pb-24`}>
       <div className="container mx-w-2xl">
         <div className="pt-20 pb-20 grid grid-cols-6 w-full gap-8">
@@ -177,7 +296,7 @@ const Item: NextPage = () => {
                     <Image src={image.url} alt={"ai image"} width={256} height={256} objectFit={'contain'}/>
                   </span>
                 </div> }
-                <div style={{backgroundImage: `url(${focusPictureUrl}), url(${storeItem?.images ? storeItem?.images[pictureIndex].full : ""})`, backgroundColor: "#748DA6"}}
+                <div style={{backgroundImage: `url(${storeItem?.images ? storeItem?.images[pictureIndex].full : ""})`, backgroundColor: "#748DA6"}}
                   className="w-full h-full bg-cover bg-center transition duration-700 ease-in-out group-hover:opacity-60"
                 />
                 
@@ -195,7 +314,7 @@ const Item: NextPage = () => {
               <small className="italic text-xs text-gray-300" style={{fontSize: 10}}>Product id: {productId}</small>
 
               <div className={`${styles.dollarAmount} py-4`}>
-                <b>${storeItem?.price.toFixed(2)}</b> {storeItem?.currency}
+                <b>${(price/100).toFixed(2)}</b> {currency}
               </div>
 
               <p className={`${styles.description} m-2 p-4 rounded`}>{storeItem?.description}</p>
@@ -245,11 +364,32 @@ const Item: NextPage = () => {
               <div className={`rounded pt-2`}>
                 <div className="flex">
                   <label className="block text-gray-50 text-sm font-bold mb-1 mr-5 pt-1.5" htmlFor="username">
+                    Sizes:
+                  </label>
+                  <div className="mb-4 pb-4">
+                    {
+                      Object.keys(sizes).map((v, i) => {
+                        return (
+                          <span key={i} className={`${styles.addtocartButton} rounded p-1 px-2 mr-1 inline-flex items-center justify-center bg-gray-300`}
+                            onClick={() => { 
+                              sizeChoices[tab] = v
+                              setSizeChoices([...sizeChoices])
+                            }}>
+                              {sizeChoices[tab]}
+                          </span>
+                        )
+                      })
+                    }
+                  </div>
+                </div>
+
+                <div className="flex">
+                  <label className="block text-gray-50 text-sm font-bold mb-1 mr-5 pt-1.5" htmlFor="username">
                     Colour:
                   </label>
                   <div className="mb-4 pb-4">
                     {
-                      storeItem?.colors.map((v, i) => {
+                      colors.map((v, i) => {
                         return (
                           <span key={i}
                             className="rounded-full h-8 w-8 mr-1 inline-flex items-center justify-center border-2 border-white hover:border-gray-200"
@@ -266,25 +406,13 @@ const Item: NextPage = () => {
                     }
                   </div>
                 </div>
-                
-                <div className="mb-4">
-                  <label className="block text-gray-50 text-sm font-bold mb-2" htmlFor="username">
-                    Custom Text
-                  </label>
-                  <input className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-50 leading-tight focus:outline-none focus:shadow-outline" type="text" placeholder="Text" 
-                    value={customTexts[tab] || ""} onChange={(e) => {
-                      customTexts[tab] = e.target.value
-                      setCustomTexts([...customTexts])
-                    }}
-                  />
-                </div>
 
                 <div className="mb-4">
                   <label className="block text-gray-50 text-sm font-bold mb-2" htmlFor="username">
-                    Additional instructions
+                    Notes
                   </label>
                   <textarea rows={5}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-50 leading-tight focus:outline-none focus:shadow-outline" placeholder="Instructions" 
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Instructions" 
                     value={customInstructions[tab]} onChange={(e) => {
                       customInstructions[tab] = e.target.value
                       setCustomInstructions([...customInstructions])
@@ -297,7 +425,7 @@ const Item: NextPage = () => {
                       onClick={(e) => { 
                         e.preventDefault()
                         if (storeItem) {
-                          addToCart( storeItem, colorChoices, customTexts, customInstructions )
+                          //addToCart( storeItem, colorChoices, customTexts, customInstructions )
                         } else console.log("NO STORE ITEM!")
                       }}
                     >
@@ -305,12 +433,13 @@ const Item: NextPage = () => {
                     </button>
                 </div>
                 <div className="w-full flex justify-center mb-4">
-                  <button className={`${styles.buynowButton} text-gray-600 hover:text-gray-300 hover:bg-darkgreen hover:font-bold p-2 pr-8 pl-8 rounded`}
+                  <button className={`${styles.buynowButton} text-gray-600 hover:text-gray-800 hover:bg-darkgreen hover:font-bold p-2 pr-8 pl-8 rounded`}
                     onClick={(e) => {
                       e.preventDefault()
                       if (storeItem) {
-                        addToCart( storeItem, colorChoices, customTexts, customInstructions )
+                        //addToCart( storeItem, colorChoices, customTexts, customInstructions )
                         //history.push('/cart')
+                        buyNow()
                       } else console.log("NO STORE ITEM!")
                     }}
                   >
@@ -320,7 +449,6 @@ const Item: NextPage = () => {
               </div>
             </div>
           </div>
-          
         </div>
       </div>
     </div>

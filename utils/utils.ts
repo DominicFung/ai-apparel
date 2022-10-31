@@ -10,3 +10,6 @@ export const setIntersepter = (b: boolean) => {
     } else {  }
   }
 }
+
+type SquareEnv = "sandbox" | "production"
+export const SQUARE_ENV: SquareEnv = "sandbox"

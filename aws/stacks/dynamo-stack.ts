@@ -5,6 +5,8 @@ interface DynamoProps {
   name: string
 }
 
+const RPOLICY = RemovalPolicy.DESTROY
+
 export class DynamoStack extends Stack {
   constructor(app: App, id: string, props: DynamoProps) {
     super(app, id)
@@ -17,7 +19,7 @@ export class DynamoStack extends Stack {
       },
       billingMode: BillingMode.PAY_PER_REQUEST,
       stream: StreamViewType.NEW_IMAGE,
-      removalPolicy: RemovalPolicy.DESTROY
+      removalPolicy: RPOLICY
     })
 
     new CfnOutput(this, `${props.name}-aiServiceTableName`, {
@@ -38,7 +40,7 @@ export class DynamoStack extends Stack {
       },
       billingMode: BillingMode.PAY_PER_REQUEST,
       stream: StreamViewType.NEW_IMAGE,
-      removalPolicy: RemovalPolicy.DESTROY
+      removalPolicy: RPOLICY
     })
 
     new CfnOutput(this, `${props.name}-imageTableName`, {
@@ -54,7 +56,7 @@ export class DynamoStack extends Stack {
       },
       billingMode: BillingMode.PAY_PER_REQUEST,
       stream: StreamViewType.NEW_IMAGE,
-      removalPolicy: RemovalPolicy.DESTROY
+      removalPolicy: RPOLICY
     })
 
     new CfnOutput(this, `${props.name}-productTableName`, {
@@ -65,6 +67,48 @@ export class DynamoStack extends Stack {
     new CfnOutput(this, `${props.name}-productTableArn`, {
       value: productsTable.tableArn,
       exportName: `${props.name}-productTableArn`
+    })
+
+    const orderItemTable = new Table (this, `${props.name}-orderItemTable`, {
+      tableName: `${props.name}-OrderItemTable`,
+      partitionKey: {
+        name: `orderItemId`,
+        type: AttributeType.STRING
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      stream: StreamViewType.NEW_IMAGE,
+      removalPolicy: RPOLICY
+    })
+
+    new CfnOutput(this, `${props.name}-orderItemTableName`, {
+      value: orderItemTable.tableName,
+      exportName: `${props.name}-orderItemTableName`
+    })
+
+    new CfnOutput(this, `${props.name}-orderItemTableArn`, {
+      value: orderItemTable.tableArn,
+      exportName: `${props.name}-orderItemTableArn`
+    })
+
+    const orderTable = new Table (this, `${props.name}-orderTable`, {
+      tableName: `${props.name}-OrderTable`,
+      partitionKey: {
+        name: `orderId`,
+        type: AttributeType.STRING
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      stream: StreamViewType.NEW_IMAGE,
+      removalPolicy: RPOLICY
+    })
+
+    new CfnOutput(this, `${props.name}-orderTableName`, {
+      value: orderTable.tableName,
+      exportName: `${props.name}-orderTableName`
+    })
+
+    new CfnOutput(this, `${props.name}-orderTableArn`, {
+      value: orderTable.tableArn,
+      exportName: `${props.name}-orderTableArn`
     })
   }
 }

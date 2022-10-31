@@ -14,6 +14,8 @@ export class IamStack extends Stack {
 
     const aiServiceTableArn = Fn.importValue(`${props.name}-aiServiceTableArn`)
     const aiProductsTableArn = Fn.importValue(`${props.name}-productTableArn`)
+    const aiOrderItemTableArn = Fn.importValue(`${props.name}-orderItemTableArn`)
+    const aiOrderTableArn = Fn.importValue(`${props.name}-orderTableArn`)
     const bucketArn = Fn.importValue(`${props.bucketName}-bucketArn`)
 
     user.attachInlinePolicy(new Policy(this, `${props.name}-InlinePolicy`, {
@@ -21,7 +23,9 @@ export class IamStack extends Stack {
         new PolicyStatement({
           resources: [
             aiServiceTableArn, `${aiServiceTableArn}*`,
-            aiProductsTableArn, `${aiProductsTableArn}*`
+            aiProductsTableArn, `${aiProductsTableArn}*`,
+            aiOrderItemTableArn, `${aiOrderItemTableArn}*`,
+            aiOrderTableArn, `${aiOrderTableArn}*`
           ],
           actions: [
             'dynamodb:*'

@@ -13,7 +13,7 @@ const countryCode = [
   "GG", "VA", "IS", "HU", "IE", "IM", "JE", "IT", "LV", "LT", "LI", "LU", "MK", 
   "MT", "MC", "MD", "ME", "NL", "PL", "NO", "PT", "RO", "RE", "SM", "RS", "SK",
   "SI", "SE", "ES", "CH", "TR", "UA", "GB", "XK", "REST_OF_THE_WORLD"] as const
-type CountryCode = typeof countryCode[number]
+export type CountryCode = typeof countryCode[number]
 
 export interface GetProviderCostRequest {
   blueprintId: number
@@ -21,7 +21,7 @@ export interface GetProviderCostRequest {
   ip?: string
 }
 
-interface PrintProvider {
+export interface PrintProvider {
   id: number
   title: string
 }
@@ -107,28 +107,27 @@ interface GeoData {
   }
 }
 
-export interface UserVariant extends Variant {
-  firstItem: {
-    cost: number,
-    currency: string
-  },
-  additionalItems: {
-      cost: number,
-      currency: string
-  }
+export interface LocationBasedVariant extends Variant {
+  currency: string,
+  firstCost: number,
+  additionalCost: number,
 }
 
-export const markupAndFix = (u: UserVariant): UserVariant => {
-  let firstItem = u.firstItem.cost * 1.5 / 100
-  console.log(`Old Price: $${u.firstItem.cost/100}, New Price: ${firstItem}`)
+export interface ProviderLocationVariant extends PrintProvider{
+  locationVariant: LocationBasedVariant[]
+}
 
-  u.firstItem.cost = firstItem
-  u.additionalItems.cost = u.additionalItems.cost * 1.1 / 100
+export const markup = (u: LocationBasedVariant): LocationBasedVariant => {
+  let firstItem = u.firstCost * 1.5
+  console.log(`Old Price: $${u.additionalCost/100}, New Price: ${firstItem/100}`)
+
+  u.firstCost = firstItem
+  u.additionalCost = u.additionalCost * 1.1
   return u
 }
 
 //https://developers.printify.com/#catalog
-export default async function handler(req: NextApiRequest,res: NextApiResponse<UserVariant[]>) {
+export default async function handler(req: NextApiRequest,res: NextApiResponse<ProviderLocationVariant>) {
   const userId = req.query.userId as string
   let b = JSON.parse(req.body) as GetProviderCostRequest
 
@@ -150,21 +149,22 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<U
    */
   if (providers.length < 1) res.status(401)
   let provider = providers[0]
-  let providerVarients = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${provider.id}/variants.json`, 
+  let providerVariants = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${provider.id}/variants.json`, 
     { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as ProviderVarients
 
   let costs = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${provider.id}/shipping.json`,
     { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as Shipping
   
-  let response = [] as UserVariant[]
-  for (let varient of providerVarients.variants) {
+  let response = [] as LocationBasedVariant[]
+  for (let variant of providerVariants.variants) {
     for (let profile of costs.profiles) {
-      if (profile.variant_ids.includes(varient.id) && profile.countries.includes(countryCode)) {
+      if (profile.variant_ids.includes(variant.id) && profile.countries.includes(countryCode)) {
         response.push(
-          markupAndFix({
-            ...varient,
-            firstItem: profile.first_item,
-            additionalItems: profile.additional_items,
+          markup({
+            ...variant,
+            firstCost: profile.first_item.cost,
+            additionalCost: profile.additional_items.cost,
+            currency: profile.first_item.currency
           })
         )
         break
@@ -172,5 +172,5 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<U
     }
   }
 
-  res.json(response)
+  res.json({...provider, locationVariant: response} as ProviderLocationVariant)
 }
