@@ -14,7 +14,7 @@ import aiimage4 from '../imgs/home/aiimage4.jpeg'
 import aiimage5 from '../imgs/home/aiimage5.jpeg'
 
 import { GetServiceImageData } from './api/[userId]/replicate/stablediffusion/[serviceId]'
-import { ReplicateSDResponse, RequestProps } from './api/[userId]/replicate/stablediffusion/generate'
+import { ReplicateSDResponse, GenerateRequest } from './api/[userId]/replicate/stablediffusion/generate'
 import Link from 'next/link'
 
 const NUM_IMAGES = 3
@@ -32,10 +32,8 @@ const Home: NextPage = () => {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         num_executions: NUM_IMAGES,
-        userId: 'userid',
-        userType: 'GUEST',
         input: { prompt }
-      } as RequestProps)
+      } as GenerateRequest)
     })).json() as ReplicateSDResponse[]
 
     console.log(response)
@@ -48,10 +46,12 @@ const Home: NextPage = () => {
     let response = await (await fetch(url)).json() as GetServiceImageData
     if (response.status === 'PROCESSING') { 
       setTimeout( reloadImage, 1600+(Math.random()*500), serviceId, index )
+    } else if (response.status === 'ERROR') {
+      console.error(`Stable Diffusion encountered an error, Replicate.io service ID: ${response.id}`)
+    } else {
+      images[index] = response
+      setImages([...images])
     }
-    
-    images[index] = response
-    setImages([...images])
   }
 
   useEffect(() => {

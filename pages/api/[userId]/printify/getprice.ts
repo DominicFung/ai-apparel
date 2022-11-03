@@ -3,6 +3,7 @@ import { got } from 'got'
 
 import secret from '../../../../secret.json'
 import config from "../../../../src/aws-exports"
+import { markup } from '../../../../utils/utils'
 
 import { Amplify } from "aws-amplify"
 Amplify.configure({...config, ssr: true })
@@ -113,17 +114,8 @@ export interface LocationBasedVariant extends Variant {
   additionalCost: number,
 }
 
-export interface ProviderLocationVariant extends PrintProvider{
+export interface ProviderLocationVariant extends PrintProvider {
   locationVariant: LocationBasedVariant[]
-}
-
-export const markup = (u: LocationBasedVariant): LocationBasedVariant => {
-  let firstItem = u.firstCost * 1.5
-  console.log(`Old Price: $${u.additionalCost/100}, New Price: ${firstItem/100}`)
-
-  u.firstCost = firstItem
-  u.additionalCost = u.additionalCost * 1.1
-  return u
 }
 
 //https://developers.printify.com/#catalog

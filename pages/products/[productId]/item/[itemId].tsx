@@ -11,6 +11,7 @@ import { GetProviderCostRequest, ProviderLocationVariant, PrintProvider } from '
 import Drawer from '../../../../components/drawer'
 import Payment from '../../../../components/payment'
 import { LineItem, OrderItem, SingleItemRequest } from '../../../api/[userId]/printify/order/single'
+import { SRResponse, SuperResolutionRequest } from '../../../api/[userId]/replicate/rudalle-sr/generate'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
@@ -60,6 +61,7 @@ const Item: NextPage = () => {
 
   const [ paymentDrawerOpen, setPaymentDrawerOpen ] = useState(false)
   const [ orderItem, setOrderItem ] = useState<OrderItem>()
+  const [ fullImageServiceId, setFullImageServiceId ] = useState<string>()
 
   const handleResize = () => {
     if (window.innerWidth >= TAILWIND_SIZE['2xl']) { setTwSize('2xl'); console.log('2xl'); return }
@@ -93,7 +95,7 @@ const Item: NextPage = () => {
       let geo = await (await fetch(geourl)).json() as {ip: string}
       console.log(geo)
 
-      let url = `/api/userId/printify/getprice`
+      let url = `/api/userid/printify/getprice`
       let productId =Number(product.productId)
       console.log(productId)
       let response = await (await fetch(url, {
@@ -181,7 +183,23 @@ const Item: NextPage = () => {
     } else { console.warn(`quanity is NAN: ${i}`) }
   }, [quantityText])
 
+  const generateHQImage = async () => {
+    let url = `/api/userid/replicate/rudalle-sr/generate`
+    let response = await (await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        stablediffusionId: itemId,
+        input: { scale: 8 }
+      } as SuperResolutionRequest)
+    })).json() as SRResponse
+
+    return response
+  }
+
   const buyNow = async () => {
+    let fullImageService = (await generateHQImage())
+    setFullImageServiceId(fullImageService.id)
+
     let dynamicProgramming = {} as { [key: string]: LineItem }
     for (let i=0; i<quantity; i++) {
       let s=sizeChoices[i], c="", vid=0
@@ -198,7 +216,7 @@ const Item: NextPage = () => {
       } else {
         dynamicProgramming[key] = {
           variantId: vid,
-          printAreas: { front: "" },
+          printAreas: { front: fullImageService.s3ImageUrl },
           quantity: 1
         } as LineItem
       }
@@ -216,7 +234,7 @@ const Item: NextPage = () => {
       choice: lineItems
     } as SingleItemRequest
 
-    let url = `/api/userId/printify/order/single`
+    let url = `/api/userid/printify/order/single`
     let response = await (await fetch(url, {
       method: "POST",
       body: JSON.stringify(orderItem)
@@ -263,7 +281,7 @@ const Item: NextPage = () => {
 
   return (<>
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
-      <Payment />
+      <Payment orderItem={orderItem} fullImageServiceId={fullImageServiceId}/>
     </Drawer>
     <div className={`${styles.mainBackground} w-full p-4 pt-32 flex justify-center pb-24`}>
       <div className="container mx-w-2xl">

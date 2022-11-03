@@ -2,7 +2,8 @@ import { App } from 'aws-cdk-lib'
 
 import { S3Stack } from './stacks/s3-stack'
 import { DynamoStack } from './stacks/dynamo-stack'
-import { IamStack } from './stacks/iam-stack' 
+import { IamStack } from './stacks/iam-stack'
+import { ScheduleStack } from './stacks/schedule-stack'
 
 const PROJECT_NAME = 'AIApparel'
 const app = new App()
@@ -15,11 +16,17 @@ let dynamoStack = new DynamoStack(app, `${PROJECT_NAME}-DynamoStack`, {
   name: PROJECT_NAME
 })
 
-let sqsStack = new IamStack(app, `${PROJECT_NAME}-IamStack`, {
+let iamStack = new IamStack(app, `${PROJECT_NAME}-IamStack`, {
   name: PROJECT_NAME,
   bucketName: `${PROJECT_NAME}Bucket`
 })
-sqsStack.addDependency(s3Stack)
-sqsStack.addDependency(dynamoStack)
+iamStack.addDependency(s3Stack)
+iamStack.addDependency(dynamoStack)
+
+let scheduleStack = new ScheduleStack(app, `${PROJECT_NAME}-ScheduleStack`, {
+  name: PROJECT_NAME,
+  bucketName: `${PROJECT_NAME}Bucket`
+})
+scheduleStack.addDependency(s3Stack)
 
 app.synth()

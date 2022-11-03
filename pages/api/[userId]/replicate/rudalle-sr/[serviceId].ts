@@ -4,7 +4,7 @@ import { DynamoDBClient, DynamoDBClientConfig, UpdateItemCommand } from '@aws-sd
 import { S3Client, S3ClientConfig, PutObjectCommand } from '@aws-sdk/client-s3'
 import { got } from 'got'
 
-import { ReplicateSDResponse } from './generate'
+import { ReplicateBase } from '../stablediffusion/generate'
 
 import secret from '../../../../../secret.json'
 import cdk from '../../../../../cdk-outputs.json'
@@ -18,6 +18,10 @@ export interface GetServiceImageData {
   id: string
   status: "COMPLETE" | "PROCESSING" | "ERROR"
   url?: string
+}
+
+export interface ReplicateSRResponse extends ReplicateBase {
+  output: string
 }
 
 // returns s3 location link
@@ -50,18 +54,20 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<G
 
   let promise = []
 
+  console.log(`https://api.replicate.com/v1/predictions/${serviceId}`)
   let result = await got.get(`https://api.replicate.com/v1/predictions/${serviceId}`, {
     headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
-  }).json() as ReplicateSDResponse
+  }).json() as ReplicateSRResponse
 
   if (result.output && result.output.length > 0) {
-    let img = await got.get(result.output[0], {
+    let img = await got.get(result.output, {
       headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
     })
 
+    const key = `public/${userId}/rudalle-sr/${serviceId}/original.jpg`
     const s3Command = new PutObjectCommand({
       Bucket: cdk["AIApparel-S3Stack"].bucketName,
-      Key: `public/${userId}/stablediffusion/${serviceId}/original.jpg`,
+      Key: key,
       Body: img.rawBody
     })
     promise.push(s3.send(s3Command))
@@ -77,10 +83,11 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<G
     })
     promise.push(client.send(command))
     Promise.all(promise)
+
     res.status(200).json({
       id: serviceId,
       status: "COMPLETE",
-      url: result.output[0]
+      url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${key}`
     })
   } else if (result.status === 'failed') {
     const command = new UpdateItemCommand({

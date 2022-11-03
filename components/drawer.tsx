@@ -24,7 +24,7 @@ export default function Drawer(props: DrawerProps){
     >
       <article className="relative w-screen max-w-lg pb-10 flex flex-col space-y-6 overflow-y-scroll h-full">
         <header className="p-4 font-bold text-lg">{props.header}</header>
-        <div className="p-4">
+        <div className="px-4 py-1">
           {props.children}
         </div>
       </article>

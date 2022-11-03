@@ -30,6 +30,7 @@ export class S3Stack extends Stack {
 
     new CfnOutput(this, 'bucketName', {
       value: s3.bucketName,
+      exportName: `${props.bucketName}-bucketName`
     })
 
     new CfnOutput(this, 'bucketArn', {
