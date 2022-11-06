@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { NextPage } from 'next'
+import { ReactElement, useEffect, useState } from 'react'
+import { NextPageWithLayout } from './_app'
 import Image from 'next/image'
 import styles from '../styles/Home.module.scss'
 
@@ -16,10 +16,12 @@ import aiimage5 from '../imgs/home/aiimage5.jpeg'
 import { GetServiceImageData } from './api/[userId]/replicate/stablediffusion/[serviceId]'
 import { ReplicateSDResponse, GenerateRequest } from './api/[userId]/replicate/stablediffusion/generate'
 import Link from 'next/link'
+import HomeLayout from '../components/layouts/home'
+
 
 const NUM_IMAGES = 3
 
-const Home: NextPage = () => {
+const Home: NextPageWithLayout = () => {
   const [prompt, setPrompt] = useState("Monstera in the style of Art Nouveau.")
 
   const [images, setImages] = useState<GetServiceImageData[]>([])
@@ -159,6 +161,10 @@ const Home: NextPage = () => {
       </div>
     </div>
   )
+}
+
+Home.getLayout = (children) => {
+  return <HomeLayout>{children}</HomeLayout>
 }
 
 export default Home

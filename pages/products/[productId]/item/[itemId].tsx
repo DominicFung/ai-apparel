@@ -1,17 +1,19 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import type { NextPage } from 'next'
 import Image from 'next/image'
 import styles from '../../../../styles/Item.module.scss'
 
 import { GetServiceImageData } from '../../../api/[userId]/replicate/stablediffusion/[serviceId]'
-import { Product } from '../../../api/products/[productId]'
-import { GetProviderCostRequest, ProviderLocationVariant, PrintProvider } from '../../../api/[userId]/printify/getprice'
+import { Product, ProductImage } from '../../../api/products/[productId]'
+import { GetProviderCostRequest, ProviderLocationVariant } from '../../../api/[userId]/printify/getprice'
 import Drawer from '../../../../components/drawer'
 import Payment from '../../../../components/payment'
 import { LineItem, OrderItem, SingleItemRequest } from '../../../api/[userId]/printify/order/single'
 import { SRResponse, SuperResolutionRequest } from '../../../api/[userId]/replicate/rudalle-sr/generate'
+import { NextPageWithLayout } from '../../../_app'
+import DefaultLayout from '../../../../components/layouts/default'
+import { MockResponse } from '../../../api/[userId]/mockup/[serviceId]'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
@@ -31,13 +33,13 @@ interface Sizes {
   [size: string]: { variantId: number, color: string }[]
 }
 
-const Item: NextPage = () => {
+const Item: NextPageWithLayout = () => {
   const router = useRouter()
   const { productId, itemId } = router.query
 
   const [image, setImage] = useState<GetServiceImageData>()
   const [storeItem, setStoreItem] = useState<Product>()
-
+  const [ mockImages, setMockImages ] = useState<MockResponse[]>([])
   const [providerVariant, setProviderVariant] = useState<ProviderLocationVariant>()
 
   //** Belongs to storeItem */
@@ -57,20 +59,20 @@ const Item: NextPage = () => {
   const [ customInstructions, setCustomInstructions ] = useState<string[]>([""])
 
   const [ isUpdateCart, setIsUpdateCart ] = useState(false)
-  const [ twSize, setTwSize ] = useState<'xl'|'2xl'|'lg'|'md'|'sm'|"xs">('xl')
+  // const [ twSize, setTwSize ] = useState<'xl'|'2xl'|'lg'|'md'|'sm'|"xs">('xl')
 
   const [ paymentDrawerOpen, setPaymentDrawerOpen ] = useState(false)
   const [ orderItem, setOrderItem ] = useState<OrderItem>()
   const [ fullImageServiceId, setFullImageServiceId ] = useState<string>()
 
-  const handleResize = () => {
-    if (window.innerWidth >= TAILWIND_SIZE['2xl']) { setTwSize('2xl'); console.log('2xl'); return }
-    if (window.innerWidth >= TAILWIND_SIZE['xl']) { setTwSize('xl'); console.log('xl'); return }
-    if (window.innerWidth >= TAILWIND_SIZE['lg']) { setTwSize('lg'); console.log('lg'); return }
-    if (window.innerWidth >= TAILWIND_SIZE['md']) { setTwSize('md'); console.log('md'); return }
-    if (window.innerWidth >= TAILWIND_SIZE['sm']) { setTwSize('sm'); console.log('sm'); return }
-    setTwSize('xs'); return
-  }
+  // const handleResize = () => {
+  //   if (window.innerWidth >= TAILWIND_SIZE['2xl']) { setTwSize('2xl'); console.log('2xl'); return }
+  //   if (window.innerWidth >= TAILWIND_SIZE['xl']) { setTwSize('xl'); console.log('xl'); return }
+  //   if (window.innerWidth >= TAILWIND_SIZE['lg']) { setTwSize('lg'); console.log('lg'); return }
+  //   if (window.innerWidth >= TAILWIND_SIZE['md']) { setTwSize('md'); console.log('md'); return }
+  //   if (window.innerWidth >= TAILWIND_SIZE['sm']) { setTwSize('sm'); console.log('sm'); return }
+  //   setTwSize('xs'); return
+  // }
 
   /** AI Image */
   const getImage = async (serviceId: string) => {
@@ -83,10 +85,26 @@ const Item: NextPage = () => {
   }
 
   const getProduct = async (productId: string) => {
-    let url = `/api/products/${productId}`
-    let response = await (await fetch(url)).json() as Product
-    setStoreItem(response)
-    getCostPerVarient(response)
+    const url = `/api/products/${productId}`
+    const product = await (await fetch(url)).json() as Product
+    populateMockImages(product.images)
+    setStoreItem(product)
+    getCostPerVarient(product)
+  }
+
+  const populateMockImages = async (images: ProductImage[]) => {
+    let a = []
+    if (images) {
+      for (let i of images) {
+        const url = `/api/userid/mockup/${itemId}`
+        const response = await (await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify(i)
+        })).json() as MockResponse
+        a.push(response)
+      }
+      setMockImages(a)
+    }
   }
 
   const getCostPerVarient = async (product: Product) => {
@@ -98,10 +116,12 @@ const Item: NextPage = () => {
       let url = `/api/userid/printify/getprice`
       let productId =Number(product.productId)
       console.log(productId)
+      
       let response = await (await fetch(url, {
         method: "POST",
         body: JSON.stringify({
           blueprintId: productId,
+          printprovider: product.printprovider,
           ip: geo.ip
         } as GetProviderCostRequest)
       })).json() as ProviderLocationVariant
@@ -246,24 +266,6 @@ const Item: NextPage = () => {
       setPaymentDrawerOpen(true)
     } else console.error("ERROR, buy now no response.")
   }
-
-  // const addToCart = (si: Product, cc: number[], ct: string[], ai: string[]) => {
-  //   let cartItems: GelatoOrder[] = []
-  //   for (let i=0; i<colorChoices.length; i++) {
-  //     cartItems.push({
-  //       orderId: `aiapparel-${v4()}`,
-  //       productId: productId,
-  //       purchasePrice: si.price,
-  //       color: si.colors[cc[i]],
-  //       text: ct[i],
-  //       additionalInstructions: ai[i],
-  //     } as GelatoOrder)
-  //   }
-
-  //   console.log(`storing cart items: ${JSON.stringify(cartItems)}`)
-  //   setIsUpdateCart(true)
-  //   storeItems(si.productId, cartItems)
-  // }
   
   useEffect(() => {
     if (productId && itemId) {
@@ -272,11 +274,11 @@ const Item: NextPage = () => {
     }
   }, [productId, itemId])
 
-  useEffect(() => {
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+  // useEffect(() => {
+  //   handleResize()
+  //   window.addEventListener("resize", handleResize)
+  //   return () => window.removeEventListener("resize", handleResize)
+  // }, [])
 
 
   return (<>
@@ -286,9 +288,7 @@ const Item: NextPage = () => {
     <div className={`${styles.mainBackground} w-full p-4 pt-32 flex justify-center pb-24`}>
       <div className="container mx-w-2xl">
         <div className="pt-20 pb-20 grid grid-cols-6 w-full gap-8">
-          <div className="lg:col-span-4 col-span-6 lg:pl-0 pl-8" style={{
-            height: ['xs','sm', 'md'].includes(twSize) ? 500 : ""
-          }}>
+          <div className="lg:col-span-4 col-span-6 lg:pl-0 pl-8">
             <div className="grid grid-cols-6 gap-2 h-full">
               <div className="w-full col-span-1">
                 <div className="w-full grid grid-flow-row gap-1 justify-end">
@@ -305,7 +305,7 @@ const Item: NextPage = () => {
                 </div>
               </div>
               <div className="w-full col-span-5 h-full">
-                { image && image.url && <div className={styles.aiImage}>
+                {/* image && image.url && <div className={styles.aiImage}>
                   <span style={{
                     position: "relative", 
                     top: twSize === 'xs' ? "" : storeItem?.images[pictureIndex].location[twSize].top, 
@@ -313,8 +313,8 @@ const Item: NextPage = () => {
                   }}>
                     <Image src={image.url} alt={"ai image"} width={256} height={256} objectFit={'contain'}/>
                   </span>
-                </div> }
-                <div style={{backgroundImage: `url(${storeItem?.images ? storeItem?.images[pictureIndex].full : ""})`, backgroundColor: "#748DA6"}}
+                </div> */}
+                <div style={{backgroundImage: `url(${ mockImages[pictureIndex]? mockImages[pictureIndex].url : (storeItem?.images ? storeItem?.images[pictureIndex].full : "")})`, backgroundColor: "#748DA6"}}
                   className="w-full h-full bg-cover bg-center transition duration-700 ease-in-out group-hover:opacity-60"
                 />
                 
@@ -452,6 +452,7 @@ const Item: NextPage = () => {
                 </div>
                 <div className="w-full flex justify-center mb-4">
                   <button className={`${styles.buynowButton} text-gray-600 hover:text-gray-800 hover:bg-darkgreen hover:font-bold p-2 pr-8 pl-8 rounded`}
+                    disabled={ !storeItem || !providerVariant || !image }
                     onClick={(e) => {
                       e.preventDefault()
                       if (storeItem) {
@@ -474,4 +475,7 @@ const Item: NextPage = () => {
   )
 }
 
+Item.getLayout = (children) => {
+  return <DefaultLayout>{children}</DefaultLayout>
+}
 export default Item

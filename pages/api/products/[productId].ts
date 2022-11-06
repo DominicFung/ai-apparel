@@ -7,28 +7,25 @@ import cdk from '../../../cdk-outputs.json'
 
 import config from "../../../src/aws-exports"
 
-import { Amplify, withSSRContext } from "aws-amplify"
+import { Amplify } from "aws-amplify"
 Amplify.configure({...config, ssr: true })
 
 export interface Product {
   productId: string /** same as for platform */
   platform: 'gelato'|'printful'|'printify',
-  type: 'shirt' | 'tote',
+  printprovider?: number
+  type: 'shirt' | 'tote' | 'hoodie',
   title: string
   description: string
-  images: ProductImages[]
+  images: ProductImage[]
 }
 
-export interface ProductImages {
-  full: string,
-  preview: string,
-  location: { 
-    '2xl': ProductImageCoordinates,   // 1536px
-    'xl': ProductImageCoordinates,    // 1280px
-    'lg': ProductImageCoordinates,
-    'md': ProductImageCoordinates,
-    'sm': ProductImageCoordinates     // 640px
-  }
+export interface ProductImage {
+  id: string
+  full: string
+  preview: string
+  fullXY: ProductImageCoordinates
+  previewXY: ProductImageCoordinates
 }
 
 export interface ProductImageCoordinates {

@@ -18,13 +18,13 @@ export type CountryCode = typeof countryCode[number]
 
 export interface GetProviderCostRequest {
   blueprintId: number
+  printprovider: number
   country?: CountryCode
   ip?: string
 }
 
 export interface PrintProvider {
   id: number
-  title: string
 }
 
 interface ProviderVarients {
@@ -123,8 +123,8 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
   const userId = req.query.userId as string
   let b = JSON.parse(req.body) as GetProviderCostRequest
 
-  let providers = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers.json`, 
-    { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as PrintProvider[]
+  // let providers = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers.json`, 
+  //   { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as PrintProvider[]
 
   let countryCode: CountryCode = 'US'
   if (b.ip) {
@@ -139,12 +139,20 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
    *  How do we determin the lowest cost print provider?
    *  For now we will just choose the first provider
    */
-  if (providers.length < 1) res.status(401)
-  let provider = providers[0]
-  let providerVariants = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${provider.id}/variants.json`, 
+  // if (providers.length < 1) res.status(401)
+
+  // let provider = providers[0]
+  // for (let p in providers) {
+  //   if (providers[p].id === b.printprovider ) {
+  //     provider = providers[p]
+  //   }
+  //   break
+  // }
+  
+  let providerVariants = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${b.printprovider}/variants.json`, 
     { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as ProviderVarients
 
-  let costs = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${provider.id}/shipping.json`,
+  let costs = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${b.printprovider}/shipping.json`,
     { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as Shipping
   
   let response = [] as LocationBasedVariant[]
@@ -164,5 +172,5 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
     }
   }
 
-  res.json({...provider, locationVariant: response} as ProviderLocationVariant)
+  res.json({id: b.printprovider, locationVariant: response} as ProviderLocationVariant)
 }
