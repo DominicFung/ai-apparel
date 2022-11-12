@@ -10,7 +10,7 @@ import cdk from '../../../../../cdk-outputs.json'
 import config from "../../../../../src/aws-exports"
 
 import { Amplify } from "aws-amplify"
-import { ReplicateSDResponse } from '../stablediffusion/generate'
+import { ReplicateSRResponse } from './[serviceId]'
 Amplify.configure({...config, ssr: true })
 
 export interface AIService {
@@ -38,12 +38,13 @@ export interface SuperResolutionRequest {
   input: { scale: number }
 }
 
-export interface SRResponse extends ReplicateSDResponse {
+export interface SRResponse extends ReplicateSRResponse {
   s3ImageUrl: string
 }
 
 // https://replicate.com/cjwbw/rudalle-sr
-const MODEL_VERSION = "32fdb2231d00a10d33754cc2ba794a2dfec94216579770785849ce6f149dbc69"
+//export const RUDALLE_MODEL_VERSION = "32fdb2231d00a10d33754cc2ba794a2dfec94216579770785849ce6f149dbc69"
+export const RUDALLE_MODEL_VERSION = "42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b" // real-esrgan
 export default async function handler(req: NextApiRequest,res: NextApiResponse<SRResponse>) {
   const userId = req.query.userId as string
   let b = JSON.parse(req.body) as SuperResolutionRequest
@@ -72,7 +73,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<S
       console.log(stablediffusionService.superResolutionId)
       let result = await got.get(`https://api.replicate.com/v1/predictions/${stablediffusionService.superResolutionId}`, {
         headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
-      }).json() as ReplicateSDResponse
+      }).json() as ReplicateSRResponse
 
       const key = `public/${userId}/rudalle-sr/${stablediffusionService.superResolutionId}/original.jpg`
       res.json({ ...result, s3ImageUrl: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${key}`})
@@ -85,13 +86,13 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<S
   let replicateRes = await got.post("https://api.replicate.com/v1/predictions", {
     headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
     body: JSON.stringify({
-      "version": MODEL_VERSION,
+      "version": RUDALLE_MODEL_VERSION,
       "input": {
         "image": imgurl,
         "scale": b.input.scale
       }
     })
-  }).json() as ReplicateSDResponse
+  }).json() as ReplicateSRResponse
   console.log(replicateRes)
 
   if (replicateRes.error === null) {
@@ -105,7 +106,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<S
         created_at: replicateRes.created_at,
         aiPlatform: 'REPLICATE',
         aiModel: 'rudalle-sr',
-        aiModelVersion: MODEL_VERSION,
+        aiModelVersion: RUDALLE_MODEL_VERSION,
         serviceStatus: 'PROCESSING',
         response: JSON.stringify(replicateRes)
     } as AIService

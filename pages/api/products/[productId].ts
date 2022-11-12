@@ -1,65 +1,62 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fromIni } from '@aws-sdk/credential-provider-ini'
+import { S3Client, S3ClientConfig, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { DynamoDBClient, GetItemCommand, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
 import  { unmarshall } from "@aws-sdk/util-dynamodb"
 
-import cdk from '../../../cdk-outputs.json'
+import got from 'got'
 
+import cdk from '../../../cdk-outputs.json'
+import secret from '../../../secret.json'
 import config from "../../../src/aws-exports"
 
 import { Amplify } from "aws-amplify"
+import { ReplicateSRResponse } from '../[userId]/replicate/rudalle-sr/[serviceId]'
 Amplify.configure({...config, ssr: true })
 
-export interface Product {
+export interface ProductRaw {
   productId: string /** same as for platform */
   platform: 'gelato'|'printful'|'printify',
   printprovider?: number
   type: 'shirt' | 'tote' | 'hoodie',
   title: string
   description: string
+  images: ProductImageRaw[]
+}
+
+interface ProductImageRaw {
+  id: string
+  full: ProductImageDetailsRaw
+  preview: ProductImageDetailsRaw
+}
+
+export interface ProductImageDetailsRaw {
+  externalUrl: string
+  view: 'front' | 'back' | 'none'
+  coordinates: {
+    top: number
+    left: number
+  }
+}
+
+export interface Product  extends ProductRaw {
   images: ProductImage[]
 }
 
-export interface ProductImage {
-  id: string
-  full: string
-  preview: string
-  fullXY: ProductImageCoordinates
-  previewXY: ProductImageCoordinates
+export interface ProductImage extends ProductImageRaw {
+  full: ProductImageDetails
+  preview: ProductImageDetails
 }
 
-export interface ProductImageCoordinates {
-  top: number, left: number
+interface ProductImageDetails extends ProductImageDetailsRaw {
+  url: string
 }
-
-/**
- * http://localhost:3000/products/1090/item/xoonokm3e5ac3dqumzmcfmr2wu
- * 
-    POSTMAN
-    https://api.printify.com/v1/catalog/blueprints.json
-
-    {
-        "id": 1090,
-        "title": "Natural Tote Bag",
-        "description": "A 100% cotton tote bag is the champion of durability, sustainability, and style. You can print your stunning designs on both sides of this bag in beautiful quality that'll last for years to come.<div>.:Material: 6 oz./yd², 100% natural cotton canvas fabric</div><br /><div>.:One size: 15\" x 16\" (38.1cm x 40.6cm)</div><br /><div>.:Convenient self-fabric handles</div><br /><div>.:Double-sided print</div>",
-        "brand": "S&S Bags",
-        "model": "42795",
-        "images": [
-            "https://images.printify.com/62a87c8f8ee62c507507bf35",
-            "https://images.printify.com/62b02ad7ebb57f0d3e07ac80",
-            "https://images.printify.com/62a1e8518daaf5c7e50353ca",
-            "https://images.printify.com/62aae0fcf3f409724f048967",
-            "https://images.printify.com/632d85c08a4829244c052ef8"
-        ]
-    },
- */
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<Product>) {
-  console.log(req.query)
   const productId = req.query.productId as string
+  console.log(productId)
   
   let config = {} as DynamoDBClientConfig
-  console.log(process.env.AWS_PROFILE)
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
   else { 
     config["credentials"] = { 
@@ -70,6 +67,17 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
   }
   let client = new DynamoDBClient(config)
 
+  let s3Config = {} as S3ClientConfig
+  if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
+  else { 
+    s3Config["credentials"] = { 
+      accessKeyId: cdk["AIApparel-IamStack"].AccessKey, 
+      secretAccessKey: cdk["AIApparel-IamStack"].SecretKey 
+    }
+    s3Config.region = 'us-east-1'
+  }
+  const s3 = new S3Client(s3Config)
+
   let command = new GetItemCommand({
     TableName: cdk["AIApparel-DynamoStack"].AIApparelproductTableName,
     Key: { productId: { S: productId } }
@@ -77,7 +85,64 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
 
   let response = await client.send(command)
   if (response.Item != undefined) {
-    console.log(unmarshall(response.Item) as Product)
-    res.json(unmarshall(response.Item) as Product)
-  } else { res.status(401)}
+    let r = unmarshall(response.Item) as ProductRaw
+    console.log(r)
+    let product = { ...r, images: []} as Product
+
+    for (let i of r.images) {
+      const fullKey = `products/printify/${productId}/${i.id}/full.jpg`
+      const previewKey = `products/printify/${productId}/${i.id}/preview.jpg`
+
+      try {
+        const command0 = new HeadObjectCommand({
+          Bucket: cdk["AIApparel-S3Stack"].bucketName,
+          Key: fullKey,
+        })
+        await s3.send(command0)
+      } catch {
+        console.log(`Full Image not yet saved "${fullKey}". Saving ..`)
+        let img = await got.get(i.full.externalUrl, {
+          headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
+        }).json() as ReplicateSRResponse
+
+        if (img.output) {
+          let rawImg = await got.get(img.output, {
+            headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
+          })
+
+          const command1 = new PutObjectCommand({
+            Bucket: cdk["AIApparel-S3Stack"].bucketName,
+            Key: fullKey,
+            Body: rawImg.rawBody
+          })
+          await s3.send(command1)
+        }
+      } 
+      
+      try {
+        const command0 = new HeadObjectCommand({
+          Bucket: cdk["AIApparel-S3Stack"].bucketName,
+          Key: previewKey
+        })
+        await s3.send(command0)
+      } catch {
+        console.log(`Full Image not yet saved "${previewKey}". Saving ..`)
+        let img = await got.get(i.preview.externalUrl)
+        const command1 = new PutObjectCommand({
+          Bucket: cdk["AIApparel-S3Stack"].bucketName,
+          Key: previewKey,
+          Body: img.rawBody
+        })
+        await s3.send(command1)
+      }
+
+      product.images.push({
+        id: i.id,
+        full: {...i.full, url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${fullKey}`},
+        preview: { ...i.preview, url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${previewKey}` }
+      })
+    }
+
+    res.json(product)
+  } else { res.status(401) }
 }

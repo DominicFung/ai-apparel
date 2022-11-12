@@ -8,7 +8,7 @@ import { TokenResult } from '@square/web-sdk'
 import { v4 as uuidv4 } from 'uuid'
 import { got } from 'got'
 
-import { CountryCode } from '../getprice'
+import { CountryCode } from '../variants'
 
 import cdk from '../../../../../cdk-outputs.json'
 import config from "../../../../../src/aws-exports"

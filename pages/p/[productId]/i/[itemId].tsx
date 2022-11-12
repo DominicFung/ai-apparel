@@ -6,8 +6,8 @@ import styles from '../../../../styles/Item.module.scss'
 import namedColors from 'color-name-list'
 
 import { GetServiceImageData } from '../../../api/[userId]/replicate/stablediffusion/[serviceId]'
-import { Product, ProductImage } from '../../../api/products/[productId]'
-import { GetProviderCostRequest, ProviderLocationVariant } from '../../../api/[userId]/printify/variants'
+import { Product } from '../../../api/products/[productId]'
+import { GetProviderCostRequest, LocationBasedVariant, ProviderLocationVariant } from '../../../api/[userId]/printify/variants'
 import Drawer from '../../../../components/drawer'
 import Payment from '../../../../components/payment'
 import { LineItem, OrderItem, SingleItemRequest } from '../../../api/[userId]/printify/order/single'
@@ -15,34 +15,33 @@ import { SRResponse, SuperResolutionRequest } from '../../../api/[userId]/replic
 import { NextPageWithLayout } from '../../../_app'
 import DefaultLayout from '../../../../components/layouts/default'
 import { MockResponse } from '../../../api/[userId]/mockup/[serviceId]'
+import { PrintifyMock } from '../../../api/[userId]/printify/mockup/[itemId]'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
 
-
-const COL_MAP = {
-  'Natural': "#F6EAD2",
-  'French Navy': "#083148" // FORK color-name-list .. and add French Navy
-}
-
 interface Sizes {
-  [size: string]: { variantId: number, color: string }[]
+  [size: string]: { 
+    variantId: number, 
+    color: { name: string, hex: string } }[]
 }
-
+const _ENV = 'Dev' as 'Dev' | 'Production'
 const Item: NextPageWithLayout = () => {
   const router = useRouter()
   const { productId, itemId } = router.query
 
-  const [image, setImage] = useState<GetServiceImageData>()
-  const [storeItem, setStoreItem] = useState<Product>()
-  const [ mockImages, setMockImages ] = useState<MockResponse[]>([])
+  const [aiimage, setAIImage] = useState<GetServiceImageData>()
+  const [product, setProduct] = useState<Product>()
   const [providerVariant, setProviderVariant] = useState<ProviderLocationVariant>()
+
+  const [ mockPreview, setMockPreviews ] = useState<(MockResponse|null)[]>([])
+  const [ mockImages, setMockImages ] = useState<(MockResponse|null)[]>([])
+  
 
   //** Belongs to storeItem */
   const [ price, setPrice ] = useState(0)
   const [ currency, setCurrency ] = useState('USD')
   const [ sizes, setSizes ] = useState<Sizes>({}) // Key to menu, if size change, colors change
-  const [ colors, setColors ] = useState<string[]>([])
 
   const [ pictureIndex, setPicutreIndex] = useState(0)
 
@@ -67,49 +66,98 @@ const Item: NextPageWithLayout = () => {
     if (response.status === 'PROCESSING') { 
       setTimeout( getImage, 600+(Math.random()*500), serviceId )
     }
-    setImage(response)
+    setAIImage(response)
   }
 
   const getProduct = async (productId: string) => {
     const url = `/api/products/${productId}`
     const product = await (await fetch(url)).json() as Product
-    populateMockImages(product.images)
-    setStoreItem(product)
+    setProduct(product)
     getCostPerVarient(product)
   }
 
-  const populateMockImages = async (images: ProductImage[]) => {
+  const populateFullMockImage = async (p: Product, v: LocationBasedVariant, index: number) => {
+    const url = `/api/userid/printify/mockup/${itemId}`
+    const i = v.mockup.cameras[index]
+    const response = await (await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        blueprintId: Number(p.productId),
+        printProviderId: p.printprovider,
+        variantId: v.id,
+        cameraId: i.camera_id,
+        size: 'full'
+      } as PrintifyMock)
+    })).json() as MockResponse
+
+    let temp = mockImages
+    temp[index] = response
+    setMockImages([...temp])
+  }
+
+  const populateMockImages = async (p: Product, v: LocationBasedVariant) => {
     let a = []
-    if (images.length > 0) {
-      for (let i of images) {
-        const url = `/api/userid/mockup/${itemId}`
-        const response = await (await fetch(url, {
+    if (v.mockup.cameras.length > 0) {
+      let c = v.mockup.cameras
+      for (let i of c) {
+        const url = `/api/userid/printify/mockup/${itemId}`
+        const response = fetch(url, {
           method: 'POST',
-          body: JSON.stringify(i)
-        })).json() as MockResponse
+          body: JSON.stringify({
+            blueprintId: Number(p.productId),
+            printProviderId: p.printprovider,
+            variantId: v.id,
+            cameraId: i.camera_id,
+            size: 'preview'
+          } as PrintifyMock)
+        })
+
         a.push(response)
       }
-      setMockImages(a)
+
+      Promise.all(a).then( async a => {
+        let previews = [], full = []
+        for (let i of a) {
+          previews.push( await i.json() as MockResponse )
+          full.push(null)
+        }
+        setMockPreviews(previews)
+        setMockImages(full)
+      })
     }
   }
 
   const getCostPerVarient = async (product: Product) => {
     if (product.platform === "printify") {
-      let geourl = `https://api.ipify.org?format=json`
-      let geo = await (await fetch(geourl)).json() as {ip: string}
-      console.log(geo)
-
-      let url = `/api/userid/printify/getprice`
+      let geo: {ip: string} | undefined
+      if (_ENV === 'Production') {
+        let geourl = `https://api.ipify.org?format=json`
+        let geo = await (await fetch(geourl)).json() as {ip: string}
+        console.log(geo)
+      }
+      
+      let url = `/api/userid/printify/variants`
       let productId =Number(product.productId)
       console.log(productId)
-      
-      let response = await (await fetch(url, {
-        method: "POST",
-        body: JSON.stringify({
+
+      let body: GetProviderCostRequest
+      if (geo) {
+        body = {
           blueprintId: productId,
           printprovider: product.printprovider,
           ip: geo.ip
-        } as GetProviderCostRequest)
+        } as GetProviderCostRequest
+      } else {
+        body = {
+          blueprintId: productId,
+          printprovider: product.printprovider,
+          country: 'CA'
+        } as GetProviderCostRequest
+      }
+      
+      let response = await (await fetch(url, {
+        method: "POST",
+        body: JSON.stringify(body)
       })).json() as ProviderLocationVariant
 
       setProviderVariant(response)
@@ -118,34 +166,32 @@ const Item: NextPageWithLayout = () => {
        * List all variants for user, this will be a size based menu. 
        * Each size must be UNIQUE. We're going to generate a new key structure.*/
       let sizes: Sizes = {}
-      let colors: string[] = []
       for (let v of response.locationVariant) {
         if (!Object.keys(sizes).includes(v.options.size)) {
           sizes[v.options.size] = []
         }
 
         let c = namedColors.find( color => color.name === v.options.color )
-        console.log(c)
-        if (c && !colors.includes(c.hex) && !colors.includes(v.options.color)) {
-          // if (Object.keys(COL_MAP).includes(v.options.color)) {
-          //   colors.push(COL_MAP[v.options.color])
-          // } else colors.push(v.options.color)
-          if (c) { colors.push(c.hex) }
-          else colors.push(v.options.color)
-        }
-
-        if (c) sizes[v.options.size].push({variantId: v.id, color: c.hex})
-        else sizes[v.options.size].push({variantId: v.id, color: v.options.color})
+        if (c) sizes[v.options.size].push({variantId: v.id, color: c})
+        else sizes[v.options.size].push({variantId: v.id, color: { name: v.options.color, hex: "" }})
       }
       setSizes(sizes)
-      setColors(colors)
 
       let iks = Object.keys(sizes)[0]
       setSizeChoices([iks])
 
-      let variant = response.locationVariant[0]
-      setPrice(variant.firstCost)
-      setCurrency(variant.currency)
+      // Some varients dont have prices ....
+      // Also, this is the wrong way to do pricing
+
+      for (let variant of response.locationVariant) {
+        console.log(`price: ${variant.price}`)
+        if (variant.price) {
+          setPrice(variant.price + variant.firstCost)
+          setCurrency(variant.currency)
+          break
+        }
+
+      }
     }
   }
 
@@ -211,15 +257,11 @@ const Item: NextPageWithLayout = () => {
 
     let dynamicProgramming = {} as { [key: string]: LineItem }
     for (let i=0; i<quantity; i++) {
-      let s=sizeChoices[i], c="", vid=0
-      for (let size of sizes[s]) {
-        if (size.color === colors[colorChoices[i]]) {
-          c = size.color; vid = size.variantId; break
-        }
-      }
+      const s = sizeChoices[i]
+      const c = sizes[s][colorChoices[i]].color.hex
+      const vid= sizes[s][colorChoices[i]].variantId
 
       let key = `${s}::::${c}`
-
       if (dynamicProgramming[key]) {
         dynamicProgramming[key].quantity += 1
       } else {
@@ -263,6 +305,30 @@ const Item: NextPageWithLayout = () => {
     }
   }, [productId, itemId])
 
+  // Generate PREVIEW IMAGES
+  useEffect(() => {
+    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0) {
+      const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
+      let variant = providerVariant.locationVariant[0]
+      for (let v of providerVariant.locationVariant) {
+        if (v.id === vid){ variant=v; break }
+      }
+      populateMockImages(product, variant)
+    }
+  }, [product, itemId, providerVariant, tab, sizeChoices, colorChoices, sizes])
+
+  // Generate FULL Image
+  useEffect(() => {
+    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0) {
+      const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
+      let variant = providerVariant.locationVariant[0]
+      for (let v of providerVariant.locationVariant) {
+        if (v.id === vid){ variant=v; break }
+      }
+      populateFullMockImage(product, variant, pictureIndex)
+    }
+  }, [product, providerVariant, pictureIndex, mockImages, tab, sizeChoices, colorChoices, sizes])
+
   return (<>
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
       <Payment orderItem={orderItem} fullImageServiceId={fullImageServiceId}/>
@@ -274,23 +340,34 @@ const Item: NextPageWithLayout = () => {
             <div className="grid grid-cols-6 gap-2 h-full">
               <div className="w-full col-span-1">
                 <div className="w-full grid grid-flow-row gap-1 justify-end">
-                  { storeItem?.images?.map((v, i) => {
+                  { 
+                  mockPreview.length > 0 ? 
+                    mockPreview?.map((v, i) => {
                       return (
                         <div key={i} style={{
-                          backgroundImage: `url(${storeItem?.images ? storeItem?.images[i].preview.url : ""})`, backgroundColor: "#748DA6",
+                          backgroundImage: `url(${(v ? v.url : "")})`, backgroundColor: "#748DA6",
                           border: pictureIndex == i ? "solid gray 2px" : ""
                         }} onClick={() => { setPicutreIndex(i) }}
                           className="w-20 h-20 bg-cover bg-center transition duration-700 ease-in-out group-hover:opacity-60"
                         />
                       )
-                  })}
+                    }) :
+                    product?.images?.map((v, i) => {
+                        return (
+                          <div key={i} style={{
+                            backgroundImage: `url(${(product?.images ? product?.images[i].preview.url : "")})`, backgroundColor: "#748DA6",
+                            border: pictureIndex == i ? "solid gray 2px" : ""
+                          }} onClick={() => { setPicutreIndex(i) }}
+                            className="w-20 h-20 bg-cover bg-center transition duration-700 ease-in-out group-hover:opacity-60"
+                          />
+                        )
+                    })}
                 </div>
               </div>
               <div className="w-full col-span-5 h-full">
-                <div style={{backgroundImage: `url(${ mockImages[pictureIndex]? mockImages[pictureIndex].url : (storeItem?.images ? storeItem?.images[pictureIndex].full.url : "")})`, backgroundColor: "#748DA6"}}
+                <div style={{backgroundImage: `url(${ mockImages[pictureIndex]? mockImages[pictureIndex]!.url : (mockPreview[pictureIndex] ? mockPreview[pictureIndex]!.url : "")})`, backgroundColor: "#748DA6"}}
                   className="w-full h-full bg-cover bg-center transition duration-700 ease-in-out group-hover:opacity-60"
                 />
-                
               </div>
             </div>
           </div>
@@ -301,14 +378,14 @@ const Item: NextPageWithLayout = () => {
                 <span className="inline-flex items-center justify-center px-2 py-1 mr-2 text-xs font-bold leading-none text-gray-100 bg-gray-300 rounded-full">#cool</span>
                 <span className="inline-flex items-center justify-center px-2 py-1 mr-2 text-xs font-bold leading-none text-gray-100 bg-gray-300 rounded-full">#fancy</span>
               </div>
-              <h2 className="text-4xl text-white">{storeItem?.title}</h2>
+              <h2 className="text-4xl text-white">{product?.title}</h2>
               <small className="italic text-xs text-gray-300" style={{fontSize: 10}}>Product id: {productId}</small>
 
               <div className={`${styles.dollarAmount} py-4`}>
                 <b>${(price/100).toFixed(2)}</b> {currency}
               </div>
 
-              <p className={`${styles.description} m-2 p-4 rounded`}>{storeItem?.description}</p>
+              <p className={`${styles.description} m-2 p-4 rounded`}>{product?.description}</p>
               
               <div className="flex flex-row pt-4">
                   <label htmlFor="custom-input-number" className="w-full text-gray-50 text-sm font-semibold pt-3.5">Quantity:</label>
@@ -380,11 +457,11 @@ const Item: NextPageWithLayout = () => {
                   </label>
                   <div className="mb-4 pb-4">
                     {
-                      colors.map((v, i) => {
+                      sizes[sizeChoices[tab]]?.map((v, i) => {
                         return (
                           <span key={i}
                             className="rounded-full h-8 w-8 mr-1 inline-flex items-center justify-center border-2 border-white hover:border-gray-200"
-                            style={{backgroundColor: v||"", borderColor: colorChoices[tab]===i?v||"":""}}  
+                            style={{backgroundColor: v.color.hex ||"", borderColor: colorChoices[tab]===i?v.color.hex||"":""}}  
                             onClick={() => { 
                               colorChoices[tab] = i
                               setColorChoices([...colorChoices])
@@ -415,7 +492,7 @@ const Item: NextPageWithLayout = () => {
                     <button className={`${styles.addtocartButton} bg-gray-300 hover:bg-gray-400 p-2 pr-8 pl-8 rounded`}
                       onClick={(e) => { 
                         e.preventDefault()
-                        if (storeItem) {
+                        if (product) {
                           //addToCart( storeItem, colorChoices, customTexts, customInstructions )
                         } else console.log("NO STORE ITEM!")
                       }}
@@ -425,10 +502,10 @@ const Item: NextPageWithLayout = () => {
                 </div>
                 <div className="w-full flex justify-center mb-4">
                   <button className={`${styles.buynowButton} text-gray-600 hover:text-gray-800 hover:bg-darkgreen hover:font-bold p-2 pr-8 pl-8 rounded`}
-                    disabled={ !storeItem || !providerVariant || !image }
+                    disabled={ !product || !providerVariant || !aiimage }
                     onClick={(e) => {
                       e.preventDefault()
-                      if (storeItem) {
+                      if (product) {
                         //addToCart( storeItem, colorChoices, customTexts, customInstructions )
                         //history.push('/cart')
                         buyNow()

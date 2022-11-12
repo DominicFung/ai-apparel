@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { DynamoDBClient, DynamoDBClientConfig, PutItemCommand, PutItemCommandOutput } from '@aws-sdk/client-dynamodb'
 import  { marshall } from "@aws-sdk/util-dynamodb"
 
-import { LocationBasedVariant } from '../getprice'
+import { LocationBasedVariant } from '../variants'
 
 import cdk from '../../../../../cdk-outputs.json'
 import config from "../../../../../src/aws-exports"

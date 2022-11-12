@@ -10,7 +10,7 @@ import { calculatePrice, SQUARE_ENV as ENV } from '../utils/utils'
 import { TokenResult, VerifyBuyerResponseDetails } from '@square/web-sdk'
 import { OrderItem } from '../pages/api/[userId]/printify/order/single'
 import { PaymentRequest, TrackingOrder } from '../pages/api/[userId]/printify/order/payment'
-import { CountryCode } from '../pages/api/[userId]/printify/getprice'
+import { CountryCode } from '../pages/api/[userId]/printify/variants'
 import { GetServiceImageData } from '../pages/api/[userId]/replicate/rudalle-sr/[serviceId]'
 
 import countries from '../countries.json'

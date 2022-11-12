@@ -1,11 +1,5 @@
-import { fromIni } from '@aws-sdk/credential-provider-ini'
-
-
-import { LocationBasedVariant } from "../pages/api/[userId]/printify/getprice";
+import { LocationBasedVariant } from "../pages/api/[userId]/printify/variants";
 import { OrderItem } from "../pages/api/[userId]/printify/order/single";
-
-import cdk from '../cdk-outputs.json'
-import config from "../src/aws-exports"
 
 export const validateEmail = (email: string) => {
   const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -24,10 +18,10 @@ type SquareEnv = "sandbox" | "production"
 export const SQUARE_ENV: SquareEnv = "sandbox"
 
 export const markup = (u: LocationBasedVariant): LocationBasedVariant => {
-  let firstItem = u.firstCost * 1.5
-  console.log(`Old Price: $${u.firstCost/100}, New Price: ${firstItem/100}`)
-
-  u.firstCost = firstItem
+  //let price = u.price * 1.5
+  //console.log(`Old Price: $${u.price/100}, New Price: ${price/100}`)
+  u.price = u.price * 1.5
+  u.firstCost = u.firstCost * 1
   u.additionalCost = u.additionalCost * 1.1
   return u
 }
