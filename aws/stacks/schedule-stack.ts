@@ -1,9 +1,9 @@
-import { App, Fn, Stack } from 'aws-cdk-lib'
+import { App, Duration, Fn, RemovalPolicy, Stack } from 'aws-cdk-lib'
 
 import { Rule, Schedule,  } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
-import { Runtime } from 'aws-cdk-lib/aws-lambda'
+import { Code, LayerVersion, Runtime, Tracing } from 'aws-cdk-lib/aws-lambda'
 import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs'
 
 import { join } from 'path'
@@ -54,6 +54,35 @@ export class ScheduleStack extends Stack {
     new Rule(this, `${props.name}-ScheduleRule`, {
       schedule: Schedule.cron({ minute: '0', hour: '6' }), //UTC time + 5 (EST)
       targets: [ new LambdaFunction(lambdaFunction) ]
+    })
+
+    const layer = new  LayerVersion(this, `${props.name}-PuppeteerLayer`, {
+      removalPolicy: RemovalPolicy.DESTROY,
+      code: Code.fromAsset(join(__dirname, '../puppeteer-lambda', 'chromium')),
+      compatibleRuntimes: [Runtime.NODEJS_16_X, Runtime.NODEJS_14_X],
+    })
+
+    const puppeteerLambda = new NodejsFunction(this, `${props.name}-PuppeteerFunction`, {
+      entry: join(__dirname, '../puppeteer-lambda', 'printifyCookies.ts'),
+      role: excRole,
+      bundling: { 
+        externalModules: [ 'aws-sdk', '@sparticuz/chromium' ], // this is the key
+      },
+      depsLockFilePath: join(__dirname, '../puppeteer-lambda', 'package-lock.json'),
+      environment: {
+        author: "Dom Fung",
+        bucketName: bucketName
+      },
+      runtime: Runtime.NODEJS_16_X,
+      layers: [ layer ],
+      memorySize: 10240,
+      timeout: Duration.minutes(15),
+      tracing: Tracing.ACTIVE
+    })
+
+    new Rule(this, `${props.name}-Puppeteer-ScheduleRule`, {
+      schedule: Schedule.cron({ minute: '0', hour: '*' }),
+      targets: [ new LambdaFunction(puppeteerLambda) ]
     })
   }
 }

@@ -1,0 +1,21 @@
+{
+  "name": "aiapparel-puppeteer-lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "printifyCookies.js",
+  "scripts": {
+    "dev": "tsc && node .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.11.9",
+    "aws-sdk": "^2.1254.0"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^108.0.1",
+    "puppeteer": "^19.2.2",
+    "puppeteer-core": "^19.2.2"
+  }
+}
