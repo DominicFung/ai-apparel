@@ -22,7 +22,6 @@ export interface MockResponse {
 export default async function handler(req: NextApiRequest,res: NextApiResponse<MockResponse>) {
   const { userId, serviceId } = req.query
   const b = JSON.parse(req.body) as ProductImage
-  console.log(JSON.stringify(b, null, 2))
 
   let s3Config = {} as S3ClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
@@ -70,8 +69,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<M
       Bucket: cdk["AIApparel-S3Stack"].bucketName,
       Key: key
     })
-    let response = await s3.send(command0)
-    console.log(response)
+    await s3.send(command0)
   } catch {
     console.log(`Mock Image: None saved at "${key}". Generating ..`)
 
@@ -117,8 +115,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<M
     console.log("Mock Image: Both Image Grabbed.")
     let top = await topImg.Body?.transformToByteArray()
 
-    //console.log(base)
-
     let combine = await sharp(base)
       .composite([{ input: await sharp(top).toBuffer(), top: b.full.coordinates.top, left: b.full.coordinates.top }]).toBuffer()
     
@@ -127,8 +123,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<M
       Key: key,
       Body: combine
     })
-    const result = await s3.send(command3)
-    console.log(result)
+    await s3.send(command3)
   }
 
   res.json({

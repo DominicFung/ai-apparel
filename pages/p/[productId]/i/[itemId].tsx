@@ -16,6 +16,7 @@ import { NextPageWithLayout } from '../../../_app'
 import DefaultLayout from '../../../../components/layouts/default'
 import { MockResponse } from '../../../api/[userId]/mockup/[serviceId]'
 import { PrintifyMock } from '../../../api/[userId]/printify/mockup/[itemId]'
+import { PrintifyImageUploadResponse, Upload } from '../../../api/[userId]/printify/mockup/upload'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
@@ -31,6 +32,7 @@ const Item: NextPageWithLayout = () => {
   const { productId, itemId } = router.query
 
   const [aiimage, setAIImage] = useState<GetServiceImageData>()
+  const [printifyUploaoId, setPrintifyUploaoId] = useState<string>()
   const [product, setProduct] = useState<Product>()
   const [providerVariant, setProviderVariant] = useState<ProviderLocationVariant>()
 
@@ -76,7 +78,7 @@ const Item: NextPageWithLayout = () => {
     getCostPerVarient(product)
   }
 
-  const populateFullMockImage = async (p: Product, v: LocationBasedVariant, index: number) => {
+  const populateFullMockImage = async (p: Product, v: LocationBasedVariant, index: number, printifyUploaoId: string) => {
     const url = `/api/userid/printify/mockup/${itemId}`
     const i = v.mockup.cameras[index]
     const response = await (await fetch(url, {
@@ -86,7 +88,8 @@ const Item: NextPageWithLayout = () => {
         printProviderId: p.printprovider,
         variantId: v.id,
         cameraId: i.camera_id,
-        size: 'full'
+        size: 'full',
+        imageId: printifyUploaoId
       } as PrintifyMock)
     })).json() as MockResponse
 
@@ -95,7 +98,7 @@ const Item: NextPageWithLayout = () => {
     setMockImages([...temp])
   }
 
-  const populateMockImages = async (p: Product, v: LocationBasedVariant) => {
+  const populateMockImages = async (p: Product, v: LocationBasedVariant, printifyUploaoId: string) => {
     let a = []
     if (v.mockup.cameras.length > 0) {
       let c = v.mockup.cameras
@@ -108,7 +111,8 @@ const Item: NextPageWithLayout = () => {
             printProviderId: p.printprovider,
             variantId: v.id,
             cameraId: i.camera_id,
-            size: 'preview'
+            size: 'preview',
+            imageId: printifyUploaoId
           } as PrintifyMock)
         })
 
@@ -297,6 +301,18 @@ const Item: NextPageWithLayout = () => {
       setPaymentDrawerOpen(true)
     } else console.error("ERROR, buy now no response.")
   }
+
+  const putPrintifyImage = async (itemId: string, productId: string, providerId: string) => {
+    const url = `/api/userid/printify/mockup/upload`
+    let response = await (await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({ 
+        itemId, productId, providerId
+      } as Upload)
+    })).json() as PrintifyImageUploadResponse
+    console.log(response)
+    setPrintifyUploaoId(response.id)
+  }
   
   useEffect(() => {
     if (productId && itemId) {
@@ -305,29 +321,35 @@ const Item: NextPageWithLayout = () => {
     }
   }, [productId, itemId])
 
+  useEffect(() => {
+    if (product && itemId) {
+      putPrintifyImage(itemId as string, product.productId, String(product.printprovider))
+    }
+  }, [product, itemId])
+
   // Generate PREVIEW IMAGES
   useEffect(() => {
-    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0) {
+    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUploaoId) {
       const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
       let variant = providerVariant.locationVariant[0]
       for (let v of providerVariant.locationVariant) {
         if (v.id === vid){ variant=v; break }
       }
-      populateMockImages(product, variant)
+      populateMockImages(product, variant, printifyUploaoId)
     }
-  }, [product, itemId, providerVariant, tab, sizeChoices, colorChoices, sizes])
+  }, [product, itemId, providerVariant, tab, sizeChoices, colorChoices, sizes, printifyUploaoId])
 
   // Generate FULL Image
   useEffect(() => {
-    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0) {
+    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUploaoId) {
       const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
       let variant = providerVariant.locationVariant[0]
       for (let v of providerVariant.locationVariant) {
         if (v.id === vid){ variant=v; break }
       }
-      populateFullMockImage(product, variant, pictureIndex)
+      populateFullMockImage(product, variant, pictureIndex, printifyUploaoId)
     }
-  }, [product, providerVariant, pictureIndex, mockImages, tab, sizeChoices, colorChoices, sizes])
+  }, [product, providerVariant, pictureIndex, mockImages, tab, sizeChoices, colorChoices, sizes, printifyUploaoId])
 
   return (<>
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
@@ -438,7 +460,8 @@ const Item: NextPageWithLayout = () => {
                     {
                       Object.keys(sizes).map((v, i) => {
                         return (
-                          <span key={i} className={`${styles.addtocartButton} rounded p-1 px-2 mr-1 inline-flex items-center justify-center bg-gray-300`}
+                          <span key={i} className={`${styles.addtocartButton} rounded p-1 px-2 mr-1 inline-flex items-center justify-center bg-gray-300 hover:cursor-pointer border-2 my-1 hover:border-white`}
+                            style={{borderColor: sizeChoices[tab] === v ? "white" : "", color: sizeChoices[tab] === v ? "white" : "" }}
                             onClick={() => { 
                               sizeChoices[tab] = v
                               setSizeChoices([...sizeChoices])

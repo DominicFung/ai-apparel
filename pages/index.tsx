@@ -1,4 +1,4 @@
-import { ReactElement, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NextPageWithLayout } from './_app'
 import Image from 'next/image'
 import styles from '../styles/Home.module.scss'
@@ -17,12 +17,37 @@ import { GetServiceImageData } from './api/[userId]/replicate/stablediffusion/[s
 import { ReplicateSDResponse, GenerateRequest } from './api/[userId]/replicate/stablediffusion/generate'
 import Link from 'next/link'
 import HomeLayout from '../components/layouts/home'
+import { MockResponse } from './api/[userId]/mockup'
 
 
 const NUM_IMAGES = 3
 
+const showCase = [{
+    itemId: "ywhspomwuzhzllf7idhwgk3g24",
+    userId: "userid",
+    products: [null, {
+      productId: 77,
+      providerId: 29,
+      cameraId: 73338,
+      variantId: 33393,
+    }]
+  },
+  {
+    itemId: "ywhspomwuzhzllf7idhwgk3g24",
+    userId: "userid",
+    products: [null, {
+      productId: 77,
+      providerId: 29,
+      cameraId: 73338,
+      variantId: 33393,
+    }]
+  }
+]
+
 const Home: NextPageWithLayout = () => {
   const [prompt, setPrompt] = useState("Monstera in the style of Art Nouveau.")
+
+  const [ showCase, setShowCase ] = useState<MockResponse[]>([])
 
   const [images, setImages] = useState<GetServiceImageData[]>([])
   const [generateResult, setGenerateResult] = useState<ReplicateSDResponse[]>([])
@@ -55,6 +80,14 @@ const Home: NextPageWithLayout = () => {
       setImages([...images])
     }
   }
+
+  const getMockImage = (userId: string, productId: string) => {
+
+  }
+
+  useEffect(() => {
+    
+  }, [])
 
   useEffect(() => {
     let temp = []
@@ -91,10 +124,10 @@ const Home: NextPageWithLayout = () => {
               <p className={`${styles.titleParagraph}`}>This is a paragraph that describes how this product works.</p>
             </div>
             <div className='sm:hidden md:grid xl:grid-cols-3 md:grid-cols-2 py-10 gap-1'>
-              <span><Image src={aiimage2} objectFit={'contain'}/></span>
+              {/* <span><Image src={aiimage2} objectFit={'contain'}/></span>
               <span><Image src={aiimage3} objectFit={'contain'}/></span>
               <span><Image src={aiimage4} objectFit={'contain'}/></span>
-              <span><Image src={aiimage5} objectFit={'contain'}/></span>
+              <span><Image src={aiimage5} objectFit={'contain'}/></span> */}
             </div>
           </div>
         </div>
@@ -141,7 +174,7 @@ const Home: NextPageWithLayout = () => {
             {images.map((i, e) => {
               if (i && i.status === 'COMPLETE' && i.url) {
                 return (
-                <Link href={`products/1090/item/${i.id}`} key={i.id}>
+                <Link href={`p/77/i/${i.id}`} key={i.id}>
                   <span className={styles.aiImage}>
                     <div style={{height: 0}}>
                       <span className="relative" style={{top: 500, left: 500}}>

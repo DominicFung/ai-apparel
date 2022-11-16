@@ -74,3 +74,6 @@ amplifytools.xcconfig
 #amplify-do-not-edit-end
 
 .env.local.bak
+
+chromium
+chromiumci

@@ -29,10 +29,9 @@ export default function Footer () {
       <div className="md:col-span-1 col-span-5" />
       <div className="flex flex-col pt-12 md:col-span-1 col-span-5">
         <a href="#" className="hover:underline md:text-left text-center">Products</a>
-        <a href="#" className="hover:underline md:text-left text-center">Inspo</a>
+        <a href="#" className="hover:underline md:text-left text-center">My Orders</a>
       </div>
       <div className="flex flex-col pt-12 md:col-span-1 col-span-5">
-        <a href="#" className="hover:underline md:text-left text-center">Order</a>
         <a href="#" className="hover:underline md:text-left text-center">F.A.Q</a>
         <a href="#" className="hover:underline md:text-left text-center">About</a>
       </div>

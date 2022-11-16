@@ -51,7 +51,5 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
   for (let c of r.render_settings.cameras) {
     if (variant.options.includes(c.option_id)) { cameras.push(c) }
   }
-
-  console.log(cameras)
   res.json(cameras)
 }

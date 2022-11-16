@@ -40,8 +40,6 @@ export const  getPrintifyWebPriceListing = async (blueprintId: number, providerI
   const response = await(await fetch(url)).json() as PrintifyBluePrint
 
   let pv = {} as PricePerVariant
-  console.log(response.printProviders)
-
   let p
   for (p of response.printProviders) { if (p.id) break }
   if (p) {
@@ -49,6 +47,5 @@ export const  getPrintifyWebPriceListing = async (blueprintId: number, providerI
       pv[v.id] = v.costs[0].result // not sure why costs is an array ..
     }
   }
-
   return pv
 }

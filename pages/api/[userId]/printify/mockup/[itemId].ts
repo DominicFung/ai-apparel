@@ -37,13 +37,13 @@ interface PrintifyPreviewImages {
   angle: number // 0
   
   type: "image/png"
-  src: string
   id: string
 
   name?: string
   flipX?: boolean
   flipY?: boolean
   layerType?: 'image'
+  src?: string
 }
 
 export interface PrintifyMock {
@@ -51,6 +51,7 @@ export interface PrintifyMock {
   cameraId: number
   variantId: number
   blueprintId: number
+  imageId: string
   size: 'preview'|'full'
 }
 
@@ -115,14 +116,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<M
         y: 0.5,
         angle: 0,
         type: "image/png",
-        src: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/public/${userId}/stablediffusion/${itemId}/original.jpg`,
-        
-        /**
-         * This ID comes from a post request to here: 
-         *    https://images.printify.com/storage/anonymous
-         *  Uploading the picture. POST request.
-         */
-        id: "636ec1cdca91e74067ae7f79"
+        id: b.imageId
       }]
     })
   

@@ -52,9 +52,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<M
   let base = await baseImg.Body?.transformToByteArray()
   let top = await topImg.Body?.transformToByteArray()
   
-  console.log(base)
-  console.log(top)
-  
   let combine = await sharp(base)
     .composite([{ input: await sharp(top).toBuffer(), top: 870, left: 635 }]).toBuffer()
 
@@ -64,7 +61,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<M
     Key: `${b.combine}/${id}.jpg`,
     Body: combine
   })
-  const result = await s3.send(command3)
-  console.log(result)
+  await s3.send(command3)
   res.json({ url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${b.combine}/${id}.jpg` })
 }

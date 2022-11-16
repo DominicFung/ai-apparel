@@ -54,7 +54,6 @@ interface ProductImageDetails extends ProductImageDetailsRaw {
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<Product>) {
   const productId = req.query.productId as string
-  console.log(productId)
   
   let config = {} as DynamoDBClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
@@ -86,7 +85,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
   let response = await client.send(command)
   if (response.Item != undefined) {
     let r = unmarshall(response.Item) as ProductRaw
-    console.log(r)
     let product = { ...r, images: []} as Product
 
     for (let i of r.images) {
