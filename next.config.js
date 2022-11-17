@@ -10,6 +10,13 @@ const nextConfig = {
     ]
   },
   reactStrictMode: true,
+  webpack: (config, {buildId, dev, isServer, defaultLoaders, webpack}) => {
+    config.module.rules.push({
+      test: /\.node$/,
+      loader: "node-loader",
+    })
+    return config
+  },
   swcMinify: true,
   experimental: {
     esmExternals: 'loose'
