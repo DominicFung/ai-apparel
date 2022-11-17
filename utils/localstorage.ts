@@ -1,12 +1,12 @@
-import { GelatoOrder } from '../pages/api/[userId]/gelato/order'
+import { OrderItem } from "../pages/api/[userId]/printify/order/single"
 
-export const storeItems = (productId: string, obj: GelatoOrder[]) => {
+export const storeItems = (productId: string, obj: any[]) => {
   const temp = localStorage.getItem('cart')
-  let old: GelatoOrder[] = []
-  let current: GelatoOrder[] = []
+  let old: OrderItem[] = []
+  let current: OrderItem[] = []
 
   if (temp && temp !== "") {
-    old = JSON.parse(temp) as GelatoOrder[]
+    old = JSON.parse(temp) as OrderItem[]
     console.log(`localstorage.storeItems(): old = ${JSON.stringify(old)}`)
     
     // ** Remove all current that contains our productId
@@ -30,11 +30,11 @@ export const clearItems = () => {
   localStorage.setItem('cart', "")
 }
 
-export const getItems = (productId: string): GelatoOrder[] => {
+export const getItems = (productId: string): OrderItem[] => {
   const temp = localStorage.getItem('cart')
-  let orderItems: GelatoOrder[] = []
+  let orderItems: OrderItem[] = []
   if (temp && temp !== "") {
-    const cart = JSON.parse(temp) as GelatoOrder[]
+    const cart = JSON.parse(temp) as OrderItem[]
     for (let item of cart) {
       if (item.productId == productId) {
         orderItems.push(item)
@@ -44,20 +44,20 @@ export const getItems = (productId: string): GelatoOrder[] => {
   return orderItems
 }
 
-export const getAllItems = (): GelatoOrder[] => {
+export const getAllItems = (): OrderItem[] => {
   const temp = localStorage.getItem('cart')
-  let orderItems: GelatoOrder[] = []
+  let orderItems: OrderItem[] = []
   if (temp && temp !== "") {
-    orderItems = JSON.parse(temp) as GelatoOrder[]
+    orderItems = JSON.parse(temp) as OrderItem[]
   }
   return orderItems
 }
 
 export const getItemCount = (): number => {
   const temp = localStorage.getItem('cart')
-  let orderItems: GelatoOrder[] = []
+  let orderItems: OrderItem[] = []
   if (temp && temp !== "") {
-    orderItems = JSON.parse(temp) as GelatoOrder[]
+    orderItems = JSON.parse(temp) as OrderItem[]
   }
 
   console.log(orderItems)

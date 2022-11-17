@@ -32,7 +32,7 @@ export interface LineItem {
     "quantity": number
 }
 
-export default async function handler(req: NextApiRequest,res: NextApiResponse) {
+export default async function handler(req: NextApiRequest,res: NextApiResponse<OrderItem>) {
   const userId = req.query.userId as string
   let b = JSON.parse(req.body) as SingleItemRequest
 

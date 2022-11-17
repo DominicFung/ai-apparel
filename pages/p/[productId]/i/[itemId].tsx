@@ -247,7 +247,7 @@ const Item: NextPageWithLayout = () => {
       setCustomInstructions(customInstructions)
 
     } else { console.warn(`quanity is NAN: ${i}`) }
-  }, [quantityText])
+  }, [quantityText, colorChoices, customInstructions, sizeChoices, sizes, tab])
 
   const generateHQImage = async () => {
     let url = `/api/userid/replicate/rudalle-sr/generate`
@@ -489,8 +489,8 @@ const Item: NextPageWithLayout = () => {
                     {
                       sizes[sizeChoices[tab]]?.map((v, i) => {
                         return (
-                          <Tooltip content={<span className='bg-gray-700 p-2 rounded'>{v.color.name}</span>}>
-                            <span key={i}
+                          <Tooltip content={<span className='bg-gray-700 p-2 rounded'>{v.color.name}</span>} key={i}>
+                            <span
                               className="rounded-full h-8 w-8 mr-1 inline-flex items-center justify-center border-2 border-white hover:border-gray-200"
                               style={{backgroundColor: v.color.hex ||"", borderColor: colorChoices[tab]===i?v.color.hex||"":""}}  
                               onClick={() => { 

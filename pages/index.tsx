@@ -141,7 +141,7 @@ const Home: NextPageWithLayout = () => {
                   return (
                   <Link href={`p/77/i/${i.id}`} key={i.id}>
                     <span className={s.aiImage}>
-                      <Image src={i.url} width={512} height={512} objectFit={'contain'}/>
+                      <Image src={i.url} width={512} height={512} objectFit={'contain'} alt={`AI Image ${e} ${i.id}`}/>
                     </span>
                   </Link>)
                 } else {
