@@ -43,7 +43,7 @@ export const testUpload = async (s: ReadableStream, cookies: CookieShape[]):Prom
   for (let c of cookies) {
     cookieString += `${c.name}=${c.value};`
   }
-  console.log(cookieString)
+  //console.log(cookieString)
 
   let config = {
     method: 'post',
@@ -70,6 +70,6 @@ export const testUpload = async (s: ReadableStream, cookies: CookieShape[]):Prom
   }
 
   let res = await axios(config)
-  console.log(JSON.stringify(res.data))
+  //console.log(JSON.stringify(res.data))
   return res.data as PrintifyImageUploadResponse
 }

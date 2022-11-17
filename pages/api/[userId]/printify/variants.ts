@@ -150,7 +150,7 @@ interface Camera {
   label: "Front" | "Back"
   position: 'front' | 'back'
   is_default: number
-  option_id: number
+  option_id: number | null
   camera_id: number
 }
 
@@ -197,7 +197,8 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
 
         let cameras = [] as Camera[]
         for (let c of r.render_settings.cameras) {
-          if (internalvariant.options.includes(c.option_id)) { cameras.push(c) }
+          if (c.option_id === null) { cameras.push(c) }
+          else if (internalvariant.options.includes(c.option_id)) { cameras.push(c) }
         }
 
         response.push(
@@ -232,7 +233,8 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
 
           let cameras = [] as Camera[]
           for (let c of r.render_settings.cameras) {
-            if (internalvariant.options.includes(c.option_id)) { cameras.push(c) }
+            if (c.option_id === null) { cameras.push(c) }
+            else if (internalvariant.options.includes(c.option_id)) { cameras.push(c) }
           }
 
           response.push(

@@ -5,6 +5,8 @@ import styles from '../../../../styles/Item.module.scss'
 
 import namedColors from 'color-name-list'
 
+import { Tooltip } from "@material-tailwind/react"
+
 import { GetServiceImageData } from '../../../api/[userId]/replicate/stablediffusion/[serviceId]'
 import { Product } from '../../../api/products/[productId]'
 import { GetProviderCostRequest, LocationBasedVariant, ProviderLocationVariant } from '../../../api/[userId]/printify/variants'
@@ -16,7 +18,10 @@ import { NextPageWithLayout } from '../../../_app'
 import DefaultLayout from '../../../../components/layouts/default'
 import { MockResponse } from '../../../api/[userId]/mockup/[serviceId]'
 import { PrintifyMock } from '../../../api/[userId]/printify/mockup/[itemId]'
-import { PrintifyImageUploadResponse, Upload } from '../../../api/[userId]/printify/mockup/upload'
+import { Upload } from '../../../api/[userId]/printify/mockup/upload'
+import { PrintifyImageUploadResponse } from '../../../../utils/testUpload'
+
+import manualColors from '../../../../color.json'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
@@ -177,6 +182,8 @@ const Item: NextPageWithLayout = () => {
 
         let c = namedColors.find( color => color.name === v.options.color )
         if (c) sizes[v.options.size].push({variantId: v.id, color: c})
+        else if (manualColors[v.options.color])
+        sizes[v.options.size].push({variantId: v.id, color: { name: v.options.color, hex: manualColors[v.options.color] }})
         else sizes[v.options.size].push({variantId: v.id, color: { name: v.options.color, hex: "" }})
       }
       setSizes(sizes)
@@ -341,7 +348,7 @@ const Item: NextPageWithLayout = () => {
 
   // Generate FULL Image
   useEffect(() => {
-    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUploaoId) {
+    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUploaoId && mockPreview.length > 0) {
       const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
       let variant = providerVariant.locationVariant[0]
       for (let v of providerVariant.locationVariant) {
@@ -349,7 +356,7 @@ const Item: NextPageWithLayout = () => {
       }
       populateFullMockImage(product, variant, pictureIndex, printifyUploaoId)
     }
-  }, [product, providerVariant, pictureIndex, mockImages, tab, sizeChoices, colorChoices, sizes, printifyUploaoId])
+  }, [product, providerVariant, mockPreview, pictureIndex, tab, sizeChoices, colorChoices, sizes, printifyUploaoId])
 
   return (<>
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
@@ -482,16 +489,18 @@ const Item: NextPageWithLayout = () => {
                     {
                       sizes[sizeChoices[tab]]?.map((v, i) => {
                         return (
-                          <span key={i}
-                            className="rounded-full h-8 w-8 mr-1 inline-flex items-center justify-center border-2 border-white hover:border-gray-200"
-                            style={{backgroundColor: v.color.hex ||"", borderColor: colorChoices[tab]===i?v.color.hex||"":""}}  
-                            onClick={() => { 
-                              colorChoices[tab] = i
-                              setColorChoices([...colorChoices])
-                            }}>
-                            <span className={`rounded-full h-7 w-7 inline-flex items-center justify-center hover:border-gray-200 hover:border-2
-                              ${ colorChoices[tab]===i ?  "border-2 border-white" : ""}`} />
-                          </span>
+                          <Tooltip content={<span className='bg-gray-700 p-2 rounded'>{v.color.name}</span>}>
+                            <span key={i}
+                              className="rounded-full h-8 w-8 mr-1 inline-flex items-center justify-center border-2 border-white hover:border-gray-200"
+                              style={{backgroundColor: v.color.hex ||"", borderColor: colorChoices[tab]===i?v.color.hex||"":""}}  
+                              onClick={() => { 
+                                colorChoices[tab] = i
+                                setColorChoices([...colorChoices])
+                              }}>
+                              <span className={`rounded-full h-7 w-7 inline-flex items-center justify-center hover:border-gray-200 hover:border-2
+                                ${ colorChoices[tab]===i ?  "border-2 border-white" : ""}`} />
+                            </span>
+                          </Tooltip>
                         )
                       })
                     }

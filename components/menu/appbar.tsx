@@ -14,7 +14,10 @@ export default function AppBar () {
 
   return (
     <nav className="w-full flex items-center justify-between flex-wrap bg-lightsage p-6 fixed z-40 overflow-x-hidden"
-      style={{background: "linear-gradient(95.8deg, rgba(116, 141, 166, 0.3) 45.93%, rgba(156, 180, 204, 0.3) 95.87%)"}}
+      style={{
+        background: "linear-gradient(95.8deg, rgba(116, 141, 166, 0.3) 45.93%, rgba(156, 180, 204, 0.3) 95.87%)",
+        backdropFilter: "saturate(180%) blur(5px)"
+      }}
     >
         <div className="w-full hidden lg:flex flex-grow lg:items-center lg:w-auto lg:visible px-4">
           <div className={`text-sm`}>
@@ -32,7 +35,7 @@ export default function AppBar () {
             
           </div>
           <div className="flex flex-grow" />
-          <div className="flex items-center flex-shrink-0 text-white mr-6 p-4 text-xl">
+          <div className="flex items-center flex-shrink-0 text-white mr-6 p-4 text-2xl">
             AI Apparel Store
           </div>
           <div className="flex flex-grow" />

@@ -1,54 +1,31 @@
 import { useEffect, useState } from 'react'
 import { NextPageWithLayout } from './_app'
 import Image from 'next/image'
-import styles from '../styles/Home.module.scss'
+import s from '../styles/Home.module.scss'
 
-import { 
-  ShoppingBagIcon, ArrowRightOnRectangleIcon, MagnifyingGlassIcon,
-  HeartIcon 
-} from '@heroicons/react/24/solid'
+import { Element, scroller } from 'react-scroll'
 
-import aiimage2 from '../imgs/home/aiimage2.jpeg'
-import aiimage3 from '../imgs/home/aiimage3.jpeg'
-import aiimage4 from '../imgs/home/aiimage4.jpeg'
-import aiimage5 from '../imgs/home/aiimage5.jpeg'
+import { BoltIcon } from '@heroicons/react/24/solid'
 
 import { GetServiceImageData } from './api/[userId]/replicate/stablediffusion/[serviceId]'
 import { ReplicateSDResponse, GenerateRequest } from './api/[userId]/replicate/stablediffusion/generate'
 import Link from 'next/link'
 import HomeLayout from '../components/layouts/home'
-import { MockResponse } from './api/[userId]/mockup'
 
 
 const NUM_IMAGES = 3
 
-const showCase = [{
-    itemId: "ywhspomwuzhzllf7idhwgk3g24",
-    userId: "userid",
-    products: [null, {
-      productId: 77,
-      providerId: 29,
-      cameraId: 73338,
-      variantId: 33393,
-    }]
-  },
-  {
-    itemId: "ywhspomwuzhzllf7idhwgk3g24",
-    userId: "userid",
-    products: [null, {
-      productId: 77,
-      providerId: 29,
-      cameraId: 73338,
-      variantId: 33393,
-    }]
-  }
+const showCase = [
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ucz6jdbkmvdmdnzmsv75aaa2xm/75191/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/hcbzzow2pvhvzcy5h4y2uxa4zu/53740/full/original.png",
+
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ucz6jdbkmvdmdnzmsv75aaa2xm/75191/full/original.png",
 ]
 
 const Home: NextPageWithLayout = () => {
-  const [prompt, setPrompt] = useState("Monstera in the style of Art Nouveau.")
-
-  const [ showCase, setShowCase ] = useState<MockResponse[]>([])
-
+  const [prompt, setPrompt] = useState("")
   const [images, setImages] = useState<GetServiceImageData[]>([])
   const [generateResult, setGenerateResult] = useState<ReplicateSDResponse[]>([])
 
@@ -65,6 +42,13 @@ const Home: NextPageWithLayout = () => {
 
     console.log(response)
     setGenerateResult([...response])
+
+    scroller.scrollTo("aiimages", {
+      duration: 1500,
+      delay: 100,
+      smooth: true,
+      offset: 50
+    })
   }
     
   //let url = '/api/userid/replicate/stablediffusion/jfxln7xypfd27fbzmnai3r7dmy'
@@ -81,14 +65,6 @@ const Home: NextPageWithLayout = () => {
     }
   }
 
-  const getMockImage = (userId: string, productId: string) => {
-
-  }
-
-  useEffect(() => {
-    
-  }, [])
-
   useEffect(() => {
     let temp = []
     for (let i=0; i<generateResult.length; i++) {
@@ -99,99 +75,85 @@ const Home: NextPageWithLayout = () => {
   }, [generateResult])
 
   return (
-    <div className={`${styles.mainBackground} flex justify-center`}>
-      <div className='max-w-screen-2xl'>
-        <div className={`${styles.titleBox} border`}>
-          <div className="flex flex-row">
-            <div className="flex flex-grow">
-              <span className={`${styles.appbartext}`}>AI Apperal</span>
-            </div>
-            <div className="flex">
-              <span className={`${styles.appbartext}`}
-              >Advanced</span>
-              <span className={`${styles.appbartext}`}>Store</span>
-              <span className={`${styles.appbartext}`}>
-                <ShoppingBagIcon className={styles.icons}/>
-              </span>
-              <span className={`${styles.appbartext}`}>
-                <ArrowRightOnRectangleIcon className={styles.icons}/>
-              </span>
-            </div>
-          </div>
-          <div className='flex flex-row'>
-            <div className="">
-              <div className={`${styles.title}`}>Print your AI Design</div>
-              <p className={`${styles.titleParagraph}`}>This is a paragraph that describes how this product works.</p>
-            </div>
-            <div className='sm:hidden md:grid xl:grid-cols-3 md:grid-cols-2 py-10 gap-1'>
-              {/* <span><Image src={aiimage2} objectFit={'contain'}/></span>
-              <span><Image src={aiimage3} objectFit={'contain'}/></span>
-              <span><Image src={aiimage4} objectFit={'contain'}/></span>
-              <span><Image src={aiimage5} objectFit={'contain'}/></span> */}
-            </div>
+    <div className={`${s.mainBackground}`}>
+      <div className={s.section1}>
+        <div className={`${s.slider}`}>
+          <div className={`${s.slidetrack}`}>
+            { showCase.map( (v, i) => {
+              return <div className={`${s.slide} bg-cover bg-center mx-1`} key={i}
+                style={{
+                  backgroundImage: `url(${v})`,
+                  backgroundColor: "#748DA6"
+                }}
+              />
+              })
+            }
           </div>
         </div>
-        <div>
 
-          <div>
-            <div className="flex justify-center">
-              <div className={styles.searchBox}>
-                <input
-                  value={prompt}
-                  onChange={(e) => { setPrompt(e.target.value) }}
-                  type="text"
-                  className="
-                    form-control
-                    block
-                    w-full
-                    px-3
-                    py-1.5
-                    text-2xl
-                    font-normal
-                    text-gray-700
-                    bg-white bg-clip-padding
-                    border border-solid border-gray-300
-                    rounded
-                    transition
-                    ease-in-out
-                    m-3
-                    focus:text-gray-700 focus:bg-white focus:border-gray-600 focus:outline-none
-                  "
-                  id="exampleSearch"
-                  placeholder="Describe Shirt ..."
-                />
-              </div>
-              <button onClick={generateImages}
-                className='ml-10 mt-3 h-12 w-20 bg-gray-600 rounded hover:bg-gray-700 text-gray-100 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none disabled:bg-gray-400'
-              >
-                <MagnifyingGlassIcon className='h-6 w-6 inline-block' />
-              </button>
-            </div>
+        <div className='w-full flex justify-center'>
+          <div className={s.glass}>
+            <div className={`${s.title}`}>Print your AI Design</div>
+            <p className={`${s.titleParagraph}`}>
+              Embrace your love of generative AI! 
+            </p>
+            <p className={`${s.titleParagraph}`}>
+              Describe the image you want to see on your apparel and print!
+            </p>
             
-          </div>
+            <div className='flex w-full flex-row-reverse mt-10'>
+              <button onClick={generateImages}
+                className={`${s.actionButton} flex flex-row py-5 px-3 text-white rounded hover:bg-gray-700 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none disabled:bg-gray-400`}
+              > <span className='px-1'>Generate</span>
+                <BoltIcon className={`${s.actionIcon} h-6 w-6 inline-block text-yellow-200`} />
+              </button>
 
-          <div className='grid grid-cols-3 gap-3 px-20 py-2'>
-            {images.map((i, e) => {
-              if (i && i.status === 'COMPLETE' && i.url) {
-                return (
-                <Link href={`p/77/i/${i.id}`} key={i.id}>
-                  <span className={styles.aiImage}>
-                    <div style={{height: 0}}>
-                      <span className="relative" style={{top: 500, left: 500}}>
-                        <HeartIcon className={`${styles.fav} w-6 h-6`} />
-                      </span>
-                    </div>
-                    <Image src={i.url} width={512} height={512} objectFit={'contain'}/>
-                  </span>
-                </Link>)
-              } else {
-                return <div key={e} className={styles.loadingImage} />
-              }
-            })}
+              <input
+                value={prompt}
+                onChange={(e) => { setPrompt(e.target.value) }}
+                type="text"
+                className="form-control block w-full mx-1 px-3 text-xl
+                  font-normal
+                  text-gray-700
+                  bg-white bg-clip-padding
+                  border border-solid border-gray-300
+                  rounded
+                  transition
+                  ease-in-out
+                  focus:text-gray-700 focus:bg-white focus:border-gray-600 focus:outline-none
+                "
+                id="exampleSearch"
+                placeholder="New York City as a collage with a sunset in the background."
+              />
+              
+            </div>
           </div>
-
         </div>
       </div>
+      
+      {images.length > 0 && <div className='flex justify-center'>
+        <Element name="aiimages">
+          <div className='max-w-screen-2xl'>
+            <h2 className={`${s.resultTitle} text-4xl p-5`}>Results!</h2>
+            <div className='grid grid-cols-3 gap-3 px-20 py-2'>
+              {images.map((i, e) => {
+                if (i && i.status === 'COMPLETE' && i.url) {
+                  return (
+                  <Link href={`p/77/i/${i.id}`} key={i.id}>
+                    <span className={s.aiImage}>
+                      <Image src={i.url} width={512} height={512} objectFit={'contain'}/>
+                    </span>
+                  </Link>)
+                } else {
+                  return <div key={e} className={s.loadingImage} />
+                }
+              })}
+            </div>
+          </div>
+        </Element>
+      </div>}
+      
+
     </div>
   )
 }
