@@ -1,59 +1,154 @@
+/* variables */
+$animationSpeed: 40s;
+
+.section1 {
+  --picHeight: 42rem;
+  --topAdjust: 5rem;
+}
+
+@media (min-width: 1024px) {
+  .section1 {
+    --picHeight: 58rem;
+    --topAdjust: 12rem;
+  }
+}
+
 .mainBackground {
   background: linear-gradient(118.54deg, #D3CEDF 25.14%, #748DA6 91.66%);
   border: 0
 }
 
-.titleBox {
-  margin: 3rem 4rem;
-  padding: 3rem;
-  height: 50rem;
-  
-  background: linear-gradient(95.8deg, rgba(116, 141, 166, 0.3) 45.93%, rgba(156, 180, 204, 0.3) 95.87%);
-  border-radius: 20px;
-}
-
-$picHeight: 58rem;
-
 .section1 {
-  height: $picHeight;
+  height: var(--picHeight);
   overflow-y: hidden;
+
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(calc(-250px * 7))}
+  }
+
+  .slider {
+    width: 100%;
+    margin: auto;
+    overflow: hidden;
+    position: relative;
+    
+    &::after {
+      right: 0;
+      top: 0;
+      transform: rotateZ(180deg);
+      height: var(--picHeight);
+    }
+  
+    &::before {
+      left: 0;
+      top: 0;
+    }
+    
+    .slidetrack {
+      animation: scroll $animationSpeed linear infinite;
+      display: flex;
+      width: calc(var(--picHeight) * 6);
+    }
+  
+    .slide {
+      height: var(--picHeight);
+      width: var(--picHeight);
+    }
+  }
+
+  .glass {
+    background: rgba(156, 180, 204, 0.3);
+    backdrop-filter: saturate(180%) blur(20px);
+    
+    box-shadow: 0.25rem 0.25rem 0.25rem #748DA6;
+    
+    width: 52rem;
+    color: white;
+  
+    border-radius: 1rem;
+    
+    position: relative;
+    top: calc( var(--topAdjust) - var(--picHeight) );
+  
+    padding: 3rem;
+
+    .title {
+      font-family: 'Quicksand';
+      font-style: normal;
+      font-weight: 400;
+      padding: 1rem;
+    
+      color: white;
+      text-shadow: #748DA6 1px 0 10px;
+    }
+  
+    .titleParagraph {
+      padding: 0.25rem;
+      color: white;
+      text-shadow: #748DA6 1px 0 10px;
+    
+      font-family: 'Quicksand';
+      font-style: normal;
+      font-weight: 400;
+    }
+  }
+  
+  @supports (-webkit-backdrop-filter: none) or (backdrop-filter: none) {
+    .glass {
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      box-shadow: #748DA6;
+    }
+  }
+  
+  .actionButton {
+    background-color: #D3CEDF;
+    text-shadow: #748DA6 1px 0 10px;
+    box-shadow: 0.25rem 0.25rem 0.25rem #748DA6;
+  }
+  
+  .actionIcon {
+    text-shadow: #748DA6 1px 0 10px;
+  }
 }
 
-.icons {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-.icons:hover {
-  cursor: pointer;
-}
 
-.title {
-  font-family: 'Quicksand';
-  font-style: normal;
-  font-weight: 400;
-  font-size: 96px;
-  line-height: 120px;
-  padding: 1rem;
 
-  color: white;
-  text-shadow: #748DA6 1px 0 10px;
-}
 
-.titleParagraph {
-  padding: 0.25rem;
-  color: white;
-  text-shadow: #748DA6 1px 0 10px;
-
-  font-family: 'Quicksand';
-  font-style: normal;
-  font-weight: 400;
-  font-size: 24px;
-  line-height: 30px;
-}
 
 .loadingImage {
+  width: 512px;
+  height: 512px;
   padding-bottom: 100%;
   background-color: #748DA6;
+}
+
+.animate {
+  animation : shimmer 2s infinite;
+  background: linear-gradient(118.54deg,#748DA6 0.66%, #748DA6 24%, #D3CEDF 25.14%, #748DA6 26%, #748DA6 91.66%);
+  background-size: 1000px 100%;
+}
+
+.wrapper {
+  padding: 0.25rem;
+  width: 0px;
+  animation: fullView 0.5s forwards linear;
+}
+
+@keyframes fullView {
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 .aiImage {
@@ -76,80 +171,6 @@ $picHeight: 58rem;
 	background: linear-gradient(to right,  rgba(255,255,255,1) 0%,rgba(255,255,255,0) 100%);
 }
 
-$animationSpeed: 40s;
-
-// Animation
-@keyframes scroll {
-	0% { transform: translateX(0); }
-	100% { transform: translateX(calc(-250px * 7))}
-}
-
-// Styling
-.slider {
-  width: 100%;
-	margin: auto;
-	overflow: hidden;
-	position: relative;
-	
-	&::after {
-		right: 0;
-		top: 0;
-		transform: rotateZ(180deg);
-    height: $picHeight;
-	}
-
-	&::before {
-		left: 0;
-		top: 0;
-	}
-	
-	.slidetrack {
-		animation: scroll $animationSpeed linear infinite;
-		display: flex;
-		width: calc($picHeight * 6);
-	}
-
-  .slide {
-    height: $picHeight;
-    width: $picHeight;
-  }
-}
-
-.glass {
-  background: rgba(156, 180, 204, 0.3);
-  backdrop-filter: saturate(180%) blur(20px);
-  
-  box-shadow: 0.25rem 0.25rem 0.25rem #748DA6;
-  
-  width: 52rem;
-  color: white;
-
-  border-radius: 1rem;
-  //border:rgba(116, 141, 166, 0.3) 0.25rem solid;
-  
-  position: relative;
-  top: -$picHeight+12rem;
-
-  padding: 3rem;
-}
-
-@supports (-webkit-backdrop-filter: none) or (backdrop-filter: none) {
-  .glass {
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    box-shadow: #748DA6;
-  }
-}
-
-.actionButton {
-  background-color: #D3CEDF;
-  text-shadow: #748DA6 1px 0 10px;
-  box-shadow: 0.25rem 0.25rem 0.25rem #748DA6;
-}
-
-.actionIcon {
-  text-shadow: #748DA6 1px 0 10px;
-}
 
 .resultTitle {
   color: white

@@ -9,9 +9,12 @@ import { BoltIcon } from '@heroicons/react/24/solid'
 
 import { GetServiceImageData } from './api/[userId]/replicate/stablediffusion/[serviceId]'
 import { ReplicateSDResponse, GenerateRequest } from './api/[userId]/replicate/stablediffusion/generate'
-import Link from 'next/link'
 import HomeLayout from '../components/layouts/home'
 
+import ProductPopup from '../components/popup/products'
+
+// To return to non-web
+// aws amplify update-app --region us-east-1 --app-id d13h2md0ftccbx --platform WEB_DYNAMIC
 
 const NUM_IMAGES = 3
 
@@ -26,8 +29,27 @@ const showCase = [
 
 const Home: NextPageWithLayout = () => {
   const [prompt, setPrompt] = useState("")
-  const [images, setImages] = useState<GetServiceImageData[]>([])
+  const [images, setImages] = useState<GetServiceImageData[]>([
+    {
+      id: "4hj6efalc5ge5bq4z32ys2kjv4",
+      status: 'COMPLETE',
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg",
+    },
+    {
+      id: "sjlxtbxk6ne33ckpp2mcv3fae4",
+      status: 'COMPLETE',
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/sjlxtbxk6ne33ckpp2mcv3fae4/original.jpg",
+    },
+    {
+      id: "sj7y4cdv3ngglo4bgszb6aafcu",
+      status: 'COMPLETE',
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/sj7y4cdv3ngglo4bgszb6aafcu/original.jpg",
+    }
+  ])
   const [generateResult, setGenerateResult] = useState<ReplicateSDResponse[]>([])
+
+  const [ openProducts, setOpenProducts ] = useState(false)
+  const [ activeItemId, setActiveItemId ] = useState<string>("")
 
   let generateImages = async () => {
     let url = '/api/userid/replicate/stablediffusion/generate'
@@ -42,13 +64,6 @@ const Home: NextPageWithLayout = () => {
 
     console.log(response)
     setGenerateResult([...response])
-
-    scroller.scrollTo("aiimages", {
-      duration: 1500,
-      delay: 100,
-      smooth: true,
-      offset: 50
-    })
   }
     
   //let url = '/api/userid/replicate/stablediffusion/jfxln7xypfd27fbzmnai3r7dmy'
@@ -65,16 +80,35 @@ const Home: NextPageWithLayout = () => {
     }
   }
 
+  const selectAiImage = (itemId: string) => {
+    setActiveItemId(itemId)
+    setOpenProducts(true)
+  }
+
   useEffect(() => {
-    let temp = []
-    for (let i=0; i<generateResult.length; i++) {
-      temp.push({id: generateResult[i].id, status: 'PROCESSING'} as GetServiceImageData)
-      setTimeout( reloadImage, 2600+(Math.random()*500), generateResult[i].id, i)
+    if (generateResult.length > 0) {
+      let temp = []
+      for (let i=0; i<generateResult.length; i++) {
+        temp.push({id: generateResult[i].id, status: 'PROCESSING'} as GetServiceImageData)
+        setTimeout( reloadImage, 2600+(Math.random()*500), generateResult[i].id, i)
+      }
+      setImages([...temp])
+      scroller.scrollTo("aiimages", {
+        duration: 1500,
+        delay: 100,
+        smooth: true,
+        offset: 50
+      })
     }
-    setImages([...temp])
   }, [generateResult])
 
+  useEffect(() => {
+    console.log(images)
+  }, [images])
+
   return (
+    <>
+    
     <div className={`${s.mainBackground}`}>
       <div className={s.section1}>
         <div className={`${s.slider}`}>
@@ -92,18 +126,18 @@ const Home: NextPageWithLayout = () => {
         </div>
 
         <div className='w-full flex justify-center'>
-          <div className={s.glass}>
-            <div className={`${s.title}`}>Print your AI Design</div>
-            <p className={`${s.titleParagraph}`}>
+          <div className={`${s.glass} m-5`}>
+            <div className={`${s.title} text-3xl lg:text-8xl leading-relaxed`}>Print your AI Design</div>
+            {/* <p className={`${s.titleParagraph}`}>
               Embrace your love of generative AI! 
-            </p>
-            <p className={`${s.titleParagraph}`}>
+            </p> */}
+            <p className={`${s.titleParagraph} text-base lg:text-2xl`}>
               Describe the image you want to see on your apparel and print!
             </p>
             
             <div className='flex w-full flex-row-reverse mt-10'>
               <button onClick={generateImages}
-                className={`${s.actionButton} flex flex-row py-5 px-3 text-white rounded hover:bg-gray-700 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none disabled:bg-gray-400`}
+                className={`${s.actionButton} hidden lg:flex flex-row py-5 px-3 text-white rounded hover:bg-gray-700 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none disabled:bg-gray-400`}
               > <span className='px-1'>Generate</span>
                 <BoltIcon className={`${s.actionIcon} h-6 w-6 inline-block text-yellow-200`} />
               </button>
@@ -112,7 +146,7 @@ const Home: NextPageWithLayout = () => {
                 value={prompt}
                 onChange={(e) => { setPrompt(e.target.value) }}
                 type="text"
-                className="form-control block w-full mx-1 px-3 text-xl
+                className="form-control hidden lg:block w-full mx-1 p-3 lg:text-xl
                   font-normal
                   text-gray-700
                   bg-white bg-clip-padding
@@ -123,10 +157,35 @@ const Home: NextPageWithLayout = () => {
                   focus:text-gray-700 focus:bg-white focus:border-gray-600 focus:outline-none
                 "
                 id="exampleSearch"
-                placeholder="New York City as a collage with a sunset in the background."
+                placeholder="New York City skyline blue pink newspaper collage."
               />
-              
+              <textarea rows={3} 
+                value={prompt}
+                onChange={(e) => { setPrompt(e.target.value) }}
+                className="form-control block lg:hidden w-full mx-1 p-3 lg:text-xl
+                  font-normal
+                  text-gray-700
+                  bg-white bg-clip-padding
+                  border border-solid border-gray-300
+                  rounded
+                  transition
+                  ease-in-out
+                  focus:text-gray-700 focus:bg-white focus:border-gray-600 focus:outline-none
+                "
+                id="exampleSearch"
+                placeholder="New York City skyline blue pink newspaper collage."
+              />
             </div>
+            <div className='flex lg:hidden w-full justify-center'>
+              <button onClick={generateImages}
+                  className={`${s.actionButton} justify-center m-1 py-3 px-3 text-white rounded hover:bg-gray-700 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none disabled:bg-gray-400`}
+              > <span className='flex flex-row'>
+                  <span className='px-1'>Generate</span>
+                  <BoltIcon className={`${s.actionIcon} h-6 w-6 inline-block text-yellow-200`} />
+                </span>
+              </button>
+            </div>
+            
           </div>
         </div>
       </div>
@@ -134,27 +193,55 @@ const Home: NextPageWithLayout = () => {
       {images.length > 0 && <div className='flex justify-center'>
         <Element name="aiimages">
           <div className='max-w-screen-2xl'>
-            <h2 className={`${s.resultTitle} text-4xl p-5`}>Results!</h2>
+            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
             <div className='grid grid-cols-3 gap-3 px-20 py-2'>
               {images.map((i, e) => {
                 if (i && i.status === 'COMPLETE' && i.url) {
                   return (
-                  <Link href={`p/77/i/${i.id}`} key={i.id}>
-                    <span className={s.aiImage}>
+                    <span className={s.aiImage} key={i.id}
+                      onClick={() => { selectAiImage(i.id) }}
+                    >
                       <Image src={i.url} width={512} height={512} objectFit={'contain'} alt={`AI Image ${e} ${i.id}`}/>
-                    </span>
-                  </Link>)
+                    </span>)
                 } else {
-                  return <div key={e} className={s.loadingImage} />
+                  return (
+                    <div className={s.wrapper} key={i.id}>
+                      <div key={e} className={`${s.loadingImage} ${s.animate}`} />
+                    </div>
+                  )
                 }
               })}
             </div>
           </div>
         </Element>
       </div>}
-      
 
+      <div>
+        <Element name="aiimages">
+          <div className='flex justify-center'>
+            <div className='max-w-screen-2xl'>
+              <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>How it Works,</h2>
+            </div>
+          </div>
+          <div className='flex justify-center'>
+            <div className='max-w-screen-2xl'>
+              <p className={`text-gray-50 p-1`}>
+                In August 2022, text-to-image AI art has won the first place in a digital art competition.
+              </p>
+              <p className={`text-gray-50 p-1`}>
+                As Text-to-Image models get better, 
+              </p>
+            </div>
+          </div>
+          
+          
+        </Element>
+      </div>
+
+      
     </div>
+    <ProductPopup itemId={activeItemId} open={openProducts} setOpen={setOpenProducts} />
+    </>
   )
 }
 

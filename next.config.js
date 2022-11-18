@@ -1,3 +1,5 @@
+const { truncate } = require('fs/promises')
+
 /** @type {import('next').NextConfig} */
 const withTM = require('next-transpile-modules')(['@square/web-sdk', 'react-square-web-payments-sdk'])
 
@@ -9,7 +11,7 @@ const nextConfig = {
       'aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com'
     ]
   },
-  reactStrictMode: true,
+  reactStrictMode: truncate,
   webpack: (config, {buildId, dev, isServer, defaultLoaders, webpack}) => {
     config.module.rules.push({
       test: /\.node$/,
