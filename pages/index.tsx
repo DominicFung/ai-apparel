@@ -13,6 +13,13 @@ import HomeLayout from '../components/layouts/home'
 
 import ProductPopup from '../components/popup/products'
 
+import { Navigation, Pagination } from 'swiper'
+import { Swiper, SwiperSlide} from 'swiper/react'
+import 'swiper/css'
+import 'swiper/css/navigation'
+import 'swiper/css/pagination'
+import Head from 'next/head'
+
 // To return to non-web
 // aws amplify update-app --region us-east-1 --app-id d13h2md0ftccbx --platform WEB_DYNAMIC
 
@@ -108,7 +115,25 @@ const Home: NextPageWithLayout = () => {
 
   return (
     <>
-    
+    <Head>
+      <title>
+        AI Apperal Store | Generative AI
+      </title>
+      <meta
+        name="description"
+        content="FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.)"
+        key="desc"
+      />
+      <meta property="og:title" content="AI Apperal Store | FREE AI Apperal Designer" />
+      <meta
+        property="og:description"
+        content="FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI."
+      />
+      <meta
+        property="og:image"
+        content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
+      />
+    </Head>
     <div className={`${s.mainBackground}`}>
       <div className={s.section1}>
         <div className={`${s.slider}`}>
@@ -127,15 +152,17 @@ const Home: NextPageWithLayout = () => {
 
         <div className='w-full flex justify-center'>
           <div className={`${s.glass} m-5`}>
-            <div className={`${s.title} text-3xl lg:text-8xl leading-relaxed`}>Print your AI Design</div>
+            <div className={`${s.title} text-center lg:text-left text-2xl lg:text-8xl leading-relaxed`}>
+              Free AI Apperal Designer
+            </div>
             {/* <p className={`${s.titleParagraph}`}>
               Embrace your love of generative AI! 
             </p> */}
-            <p className={`${s.titleParagraph} text-base lg:text-2xl`}>
+            <p className={`${s.titleParagraph} hidden lg:inline-block text-base lg:text-2xl`}>
               Describe the image you want to see on your apparel and print!
             </p>
             
-            <div className='flex w-full flex-row-reverse mt-10'>
+            <div className='flex w-full flex-row-reverse lg:mt-10'>
               <button onClick={generateImages}
                 className={`${s.actionButton} hidden lg:flex flex-row py-5 px-3 text-white rounded hover:bg-gray-700 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none disabled:bg-gray-400`}
               > <span className='px-1'>Generate</span>
@@ -192,7 +219,39 @@ const Home: NextPageWithLayout = () => {
       
       {images.length > 0 && <div className='flex justify-center'>
         <Element name="aiimages">
-          <div className='max-w-screen-2xl'>
+          <div className='block lg:hidden w-screen overflow-x-hidden p-5'>
+          <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
+            <Swiper
+              spaceBetween={20}
+              slidesPerView={1}
+              navigation
+              pagination={{ clickable: true }}
+              onSlideChange={() => console.log('slide change')}
+              onSwiper={(swiper: any) => console.log(swiper)}
+              modules={[Navigation, Pagination]}
+            >
+              {images.map((i, e) => {
+                if (i && i.status === 'COMPLETE' && i.url) {
+                  return (
+                    <SwiperSlide key={i.id}>
+                      <span className={s.aiImage} key={i.id} onClick={() => { selectAiImage(i.id) }}>
+                        <Image src={i.url} width={512} height={512} objectFit={'contain'} alt={`AI Image ${e} ${i.id}`}/>
+                      </span>
+                    </SwiperSlide>
+                    )
+                } else {
+                  return (
+                    <SwiperSlide key={i.id}>
+                      <div className={s.wrapper} key={i.id}>
+                        <div key={e} className={`${s.loadingImage} ${s.animate}`} />
+                      </div>
+                    </SwiperSlide>
+                  )
+                }
+              })}
+            </Swiper>
+          </div>
+          <div className='max-w-screen-2xl hidden lg:block'>
             <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
             <div className='grid grid-cols-3 gap-3 px-20 py-2'>
               {images.map((i, e) => {
@@ -217,7 +276,7 @@ const Home: NextPageWithLayout = () => {
       </div>}
 
       <div>
-        <Element name="aiimages">
+        <Element name="howitworks">
           <div className='flex justify-center'>
             <div className='max-w-screen-2xl'>
               <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>How it Works,</h2>

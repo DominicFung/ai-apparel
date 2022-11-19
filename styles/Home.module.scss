@@ -3,7 +3,7 @@ $animationSpeed: 40s;
 
 .section1 {
   --picHeight: 42rem;
-  --topAdjust: 5rem;
+  --topAdjust: 12rem;
 }
 
 @media (min-width: 1024px) {
@@ -119,7 +119,7 @@ $animationSpeed: 40s;
 
 .loadingImage {
   width: 512px;
-  height: 512px;
+  height: auto;
   padding-bottom: 100%;
   background-color: #748DA6;
 }

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 import { ShoppingBagIcon } from '@heroicons/react/24/solid'
+import whiteLogo from '../../assets/Logo-v2.png'
+import Image from 'next/image'
 
 export default function AppBar () {
   const [ cartNum, setCartNum ] = useState(0)
@@ -19,6 +21,15 @@ export default function AppBar () {
         backdropFilter: "saturate(180%) blur(5px)"
       }}
     >
+      <div className="w-full flex lg:hidden">
+          <Image src={whiteLogo} alt="Logo" width={150} height={50} objectFit={'contain'} />
+          <div className="flex flex-grow" />
+          <button className="flex items-center px-3 py-2 border rounded text-white border-white hover:text-white hover:border-white"
+            onClick={() => { }}
+          >
+            <svg className="fill-current h-3 w-3" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><title>Menu</title><path d="M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z"/></svg>
+          </button>
+        </div>
         <div className="w-full hidden lg:flex flex-grow lg:items-center lg:w-auto lg:visible px-4">
           <div className={`text-sm`}>
             <span className='block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4'>

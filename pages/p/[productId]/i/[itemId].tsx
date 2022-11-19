@@ -22,9 +22,14 @@ import { Upload } from '../../../api/[userId]/printify/mockup/upload'
 import { PrintifyImageUploadResponse } from '../../../../utils/testUpload'
 
 import manualColors from '../../../../color.json'
+import Head from 'next/head'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
+
+function cfl(string: string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
 interface Sizes {
   [size: string]: { 
@@ -359,10 +364,29 @@ const Item: NextPageWithLayout = () => {
   }, [product, providerVariant, mockPreview, pictureIndex, tab, sizeChoices, colorChoices, sizes, printifyUploaoId])
 
   return (<>
+    <Head>
+      <title>
+        AI Apperal Store | {product?.title || "Product"}
+      </title>
+      <meta
+        name="description"
+        content={`Extremely amazing AI Designed ${product ? cfl(product.type) : "Apperal"} by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
+        key="desc"
+      />
+      <meta property="og:title" content={`AI Apperal Store | ${product?.title || "Product"}`} />
+      <meta
+        property="og:description"
+        content={`Extremely amazing AI Designed ${product ? cfl(product.type) : "Apperal"} by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
+      />
+      <meta
+        property="og:image"
+        content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
+      />
+    </Head>
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
       <Payment orderItem={orderItem} fullImageServiceId={fullImageServiceId}/>
     </Drawer>
-    <div className={`${styles.mainBackground} w-full p-4 pt-32 flex justify-center pb-24`}>
+    <div className={`${styles.mainBackground} w-full p-4 pt-10 lg:pt-32  flex justify-center pb-24`}>
       <div className="container mx-w-2xl">
         <div className="pt-20 pb-20 grid grid-cols-6 w-full gap-8">
           <div className="lg:col-span-4 col-span-6 lg:pl-0 pl-8">
