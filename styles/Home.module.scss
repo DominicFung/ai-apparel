@@ -107,6 +107,11 @@ $animationSpeed: 40s;
     text-shadow: #748DA6 1px 0 10px;
     box-shadow: 0.25rem 0.25rem 0.25rem #748DA6;
   }
+
+  .actionButton:disabled {
+    background-color: rgb(156 163 175);
+    color: rgb(209 213 219)
+  }
   
   .actionIcon {
     text-shadow: #748DA6 1px 0 10px;
