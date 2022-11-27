@@ -11,7 +11,7 @@ const nextConfig = {
       'aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com'
     ]
   },
-  reactStrictMode: truncate,
+  reactStrictMode: true,
   webpack: (config, {buildId, dev, isServer, defaultLoaders, webpack}) => {
     config.module.rules.push({
       test: /\.node$/,

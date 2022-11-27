@@ -11,46 +11,10 @@ import secret from '../../../secret.json'
 import config from "../../../src/aws-exports"
 
 import { Amplify } from "aws-amplify"
-import { ReplicateSRResponse } from '../[userId]/replicate/rudalle-sr/[serviceId]'
 Amplify.configure({...config, ssr: true })
 
-export interface ProductRaw {
-  productId: string /** same as for platform */
-  platform: 'gelato'|'printful'|'printify',
-  printprovider?: number
-  type: 'shirt' | 'tote' | 'hoodie',
-  title: string
-  description: string
-  images: ProductImageRaw[]
-}
-
-interface ProductImageRaw {
-  id: string
-  full: ProductImageDetailsRaw
-  preview: ProductImageDetailsRaw
-}
-
-export interface ProductImageDetailsRaw {
-  externalUrl: string
-  view: 'front' | 'back' | 'none'
-  coordinates: {
-    top: number
-    left: number
-  }
-}
-
-export interface Product  extends ProductRaw {
-  images: ProductImage[]
-}
-
-export interface ProductImage extends ProductImageRaw {
-  full: ProductImageDetails
-  preview: ProductImageDetails
-}
-
-interface ProductImageDetails extends ProductImageDetailsRaw {
-  url: string
-}
+import { ReplicateRUDalleSRResponse } from '../../../types/replicate'
+import { Product, _Product } from '../../../types/product'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<Product>) {
   const productId = req.query.productId as string
@@ -84,7 +48,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
 
   let response = await client.send(command)
   if (response.Item != undefined) {
-    let r = unmarshall(response.Item) as ProductRaw
+    let r = unmarshall(response.Item) as _Product
     let product = { ...r, images: []} as Product
 
     for (let i of r.images) {
@@ -101,7 +65,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
         console.log(`Full Image not yet saved "${fullKey}". Saving ..`)
         let img = await got.get(i.full.externalUrl, {
           headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
-        }).json() as ReplicateSRResponse
+        }).json() as ReplicateRUDalleSRResponse
 
         if (img.output) {
           let rawImg = await got.get(img.output, {

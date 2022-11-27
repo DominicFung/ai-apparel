@@ -6,43 +6,23 @@ import { got } from 'got'
 
 import { v4 as uuidv4 } from 'uuid'
 
-import { ProductImageDetailsRaw, ProductRaw } from './[productId]'
-import { RUDALLE_MODEL_VERSION } from '../[userId]/replicate/rudalle-sr/generate'
-
 import cdk from '../../../cdk-outputs.json'
 import secret from '../../../secret.json'
-import { ReplicateSRResponse } from '../[userId]/replicate/rudalle-sr/[serviceId]'
+
+import { ReplicateRUDalleSRResponse } from '../../../types/replicate'
+import { CreateProductRequest, _Product, _ProductImageDetails } from '../../../types/product'
+import { Blueprint, PrintProvider } from '../../../types/printify'
+import { RUDALLE_MODEL_VERSION } from '../../../types/constants'
 
 
-interface CreateProduct {
-  productName: string,
-  providerName: string,
-  type: ProductRaw["type"]
-}
-
-interface PrintifyBlueprint {
-  id: number,
-  title: string,
-  description: string,
-  brand: string,
-  mode: string,
-  images: string[]
-}
-
-export interface PrintProvider {
-  id: number,
-  title: string
-}
-
-export default async function handler(req: NextApiRequest,res: NextApiResponse) {
+export default async function handler(req: NextApiRequest,res: NextApiResponse<_Product>) {
   console.log(req.headers)
   const { authorization } = req.headers
   console.log( authorization )
-  const b = req.body as CreateProduct
+  const b = req.body as CreateProductRequest
 
   if ( authorization === `Bearer ${secret.secret}`) {
     let config = {} as DynamoDBClientConfig
-    console.log(process.env.AWS_PROFILE)
     if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
     else { 
       config["credentials"] = { 
@@ -54,20 +34,20 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse) 
     let client = new DynamoDBClient(config)
 
     const blueprints = await got.get(`https://api.printify.com/v1/catalog/blueprints.json`, 
-      { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as PrintifyBlueprint[]
+      { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as Blueprint[]
 
-    let bp: PrintifyBlueprint | null = null
+    let bp: Blueprint | null = null
     for (const blueprint of blueprints) { if (blueprint.title === b.productName) { bp = blueprint; break } }
-    if (!bp) { res.status(404).send("Not Found."); return }
+    if (!bp) { res.status(404); return }
 
     const providers = await got.get(`https://api.printify.com/v1/catalog/blueprints/${bp.id}/print_providers.json`,
       { headers: {"Authorization": `Bearer ${secret.printify.token}`} }).json() as PrintProvider[]
 
     let pp: PrintProvider | null = null
     for (const provider of providers) { if (provider.title === b.providerName) { pp = provider; break } }
-    if (!pp) { res.status(404).send("Not Found."); return }
+    if (!pp) { res.status(404); return }
 
-    let product: ProductRaw = {
+    let product: _Product = {
       productId: String(bp.id),
       type: b.type,
       platform: 'printify',
@@ -81,13 +61,10 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse) 
       let rep = await got.post("https://api.replicate.com/v1/predictions", {
         headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
         body: JSON.stringify({
-          "version": RUDALLE_MODEL_VERSION,
-          "input": {
-            "image": i,
-            "scale": 2
-          }
+          version: RUDALLE_MODEL_VERSION,
+          input: { image: i, scale: 2 }
         })
-      }).json() as ReplicateSRResponse
+      }).json() as ReplicateRUDalleSRResponse
       console.log(rep)
 
       product.images.push({
@@ -96,12 +73,12 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse) 
           externalUrl: rep.urls.get,
           view: 'none',
           coordinates: { top: 1, left: 1 }
-        } as ProductImageDetailsRaw,
+        } as _ProductImageDetails,
         preview: {
           externalUrl: i,
           view: 'front',
           coordinates: { top: 1, left: 1 }
-        } as ProductImageDetailsRaw
+        } as _ProductImageDetails
       })
     }
 
@@ -113,5 +90,5 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse) 
     console.log(result)
 
     res.json(product)
-  } else { res.status(401).send("Unauthorized.") }
+  } else { res.status(401) }
 }

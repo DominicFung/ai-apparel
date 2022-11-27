@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { fromIni } from '@aws-sdk/credential-provider-ini'
 import { S3Client, S3ClientConfig, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { DynamoDBClient, ScanCommand, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
-import { Product, ProductRaw } from './[productId]'
 
 import got from 'got'
 
@@ -10,7 +9,8 @@ import cdk from '../../../cdk-outputs.json'
 import secret from '../../../secret.json'
 
 import { unmarshall } from '@aws-sdk/util-dynamodb'
-import { ReplicateSRResponse } from '../[userId]/replicate/rudalle-sr/[serviceId]'
+import { ReplicateRUDalleSRResponse } from '../../../types/replicate'
+import { Product, _Product } from '../../../types/product'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<Product[]>) {
   let config = {} as DynamoDBClientConfig
@@ -40,8 +40,8 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
   })
   const response = await client.send(command)
   if (response.Items && response.Items.length > 0) {
-    let r: ProductRaw[] = []
-    response.Items.forEach((i) => { r.push( unmarshall(i) as ProductRaw )})
+    let r: _Product[] = []
+    response.Items.forEach((i) => { r.push( unmarshall(i) as _Product )})
     let products: Product[] = []
 
     for (let p of r) {
@@ -60,7 +60,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
           console.log(`Full Image not yet saved "${fullKey}". Saving ..`)
           let img = await got.get(i.full.externalUrl, {
             headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
-          }).json() as ReplicateSRResponse
+          }).json() as ReplicateRUDalleSRResponse
   
           if (img.output) {
             let rawImg = await got.get(img.output, {

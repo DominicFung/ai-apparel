@@ -7,7 +7,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "cdk": "cdk",
-    "deploy": "tsc & cdk deploy --all --outputs-file ./cdk-outputs.json --profile juju && cp -f cdk-outputs.json ../cdk-outputs.json"
+    "deploy": "tsc & cdk deploy --all --outputs-file ./cdk-outputs.json --profile juju && cp -f cdk-outputs.json ../cdk-outputs.json && cd ../ && ./update-secret.sh"
   },
   "author": "",
   "license": "ISC",

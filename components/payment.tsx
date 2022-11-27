@@ -8,15 +8,15 @@ import {
 
 import { calculatePrice, SQUARE_ENV as ENV } from '../utils/utils'
 import { TokenResult, VerifyBuyerResponseDetails } from '@square/web-sdk'
-import { OrderItem } from '../pages/api/[userId]/printify/order/single'
-import { PaymentRequest, TrackingOrder } from '../pages/api/[userId]/printify/order/payment'
-import { CountryCode } from '../pages/api/[userId]/printify/variants'
-import { GetServiceImageData } from '../pages/api/[userId]/replicate/rudalle-sr/[serviceId]'
 
 import countries from '../countries.json'
 import secret from '../secret.json'
 
 import regionList from '../country-region.json'
+import { OrderItem } from '../types/order'
+import { CountryCode } from '../types/global'
+import { AIImageResponse } from '../types/replicate'
+import { PaymentRequest, PaymentResponse } from '../types/square'
 
 interface PaymentProps {
   orderItem: OrderItem | undefined
@@ -52,7 +52,7 @@ export default function Payment(props: PaymentProps){
 
   const [ price, setPrice ] = useState(0)
   const [ disable,  isDisabled ] = useState(true)
-  const [ image, setImage ] = useState<GetServiceImageData>()
+  const [ image, setImage ] = useState<AIImageResponse>()
 
   const checkFormFilled = () => {
     console.log(image)
@@ -69,7 +69,7 @@ export default function Payment(props: PaymentProps){
   const reloadImage = async (serviceId: string) => {
     console.log("Reloading HD Image in Payment ... ")
     let url = `/api/userid/replicate/rudalle-sr/${serviceId}`
-    let response = await (await fetch(url)).json() as GetServiceImageData
+    let response = await (await fetch(url)).json() as AIImageResponse
     if (response.status === 'PROCESSING') { 
       setTimeout( reloadImage, 1600+(Math.random()*500), serviceId )
     } else if (response.status === 'ERROR') {
@@ -119,7 +119,7 @@ export default function Payment(props: PaymentProps){
             region
           }
         } as PaymentRequest)
-      })).json() as TrackingOrder
+      })).json() as PaymentResponse
       console.log(response)
       alert(JSON.stringify(response, null, 2))
     }
@@ -128,7 +128,7 @@ export default function Payment(props: PaymentProps){
   return (<>
     <div className='mb-8'>
       <h2>${(price/100).toFixed(2)} {props.orderItem?.varients[0].currency}</h2>
-     { props.orderItem && <small className="italic text-xs text-gray-500" style={{fontSize: 10}}>Single Order Id: {props.orderItem.orderItemId}</small>}
+     { props.orderItem && <small className="italic text-xs text-gray-500" style={{fontSize: 10}}>Order Id: {props.orderItem.orderItemId}</small>}
     </div>
     <form className='mb-8'>
       <div className='flex flex-row'>

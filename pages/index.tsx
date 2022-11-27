@@ -2,55 +2,53 @@ import { useEffect, useState } from 'react'
 import { NextPageWithLayout } from './_app'
 import Image from 'next/image'
 import s from '../styles/Home.module.scss'
-
 import { Element, scroller } from 'react-scroll'
-
 import { BoltIcon } from '@heroicons/react/24/solid'
 
-import { GetServiceImageData } from './api/[userId]/replicate/stablediffusion/[serviceId]'
-import { ReplicateSDResponse, GenerateRequest } from './api/[userId]/replicate/stablediffusion/generate'
 import HomeLayout from '../components/layouts/home'
-
 import ProductPopup from '../components/popup/products'
 
 import { Navigation, Pagination } from 'swiper'
 import { Swiper, SwiperSlide} from 'swiper/react'
+
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
 import Head from 'next/head'
 
+import { AIImageResponse, GenerateAIImageRequest, ReplicateStableDiffusionResponse } from '../types/replicate'
+
 const NUM_IMAGES = 3
 
 const showCase = [
-  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
-  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ucz6jdbkmvdmdnzmsv75aaa2xm/75191/full/original.png",
-  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/hcbzzow2pvhvzcy5h4y2uxa4zu/53740/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/ucz6jdbkmvdmdnzmsv75aaa2xm/75191/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/hcbzzow2pvhvzcy5h4y2uxa4zu/53740/full/original.png",
 
-  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
-  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/printify-mockup/ucz6jdbkmvdmdnzmsv75aaa2xm/75191/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/ucz6jdbkmvdmdnzmsv75aaa2xm/75191/full/original.png",
 ]
 
-const Home: NextPageWithLayout = () => {
+const Home: NextPageWithLayout = (props) => {
   const [prompt, setPrompt] = useState("")
-  const [images, setImages] = useState<GetServiceImageData[]>([
+  const [images, setImages] = useState<AIImageResponse[]>([
     {
       id: "4hj6efalc5ge5bq4z32ys2kjv4",
       status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg",
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg",
     },
     {
       id: "sjlxtbxk6ne33ckpp2mcv3fae4",
       status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/sjlxtbxk6ne33ckpp2mcv3fae4/original.jpg",
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/sjlxtbxk6ne33ckpp2mcv3fae4/original.jpg",
     },
     {
       id: "sj7y4cdv3ngglo4bgszb6aafcu",
       status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/sj7y4cdv3ngglo4bgszb6aafcu/original.jpg",
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/sj7y4cdv3ngglo4bgszb6aafcu/original.jpg",
     }
   ])
-  const [generateResult, setGenerateResult] = useState<ReplicateSDResponse[]>([])
+  const [generateResult, setGenerateResult] = useState<ReplicateStableDiffusionResponse[]>([])
   const [ loading, setLoading ] = useState(false)
 
   const [ openProducts, setOpenProducts ] = useState(false)
@@ -58,24 +56,24 @@ const Home: NextPageWithLayout = () => {
 
   let generateImages = async () => {
     setLoading(true)
-    let url = '/api/userid/replicate/stablediffusion/generate'
+    let url = '/api/replicate/stablediffusion/generate'
     let response = await (await fetch(url, {
       method: 'POST', 
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         num_executions: NUM_IMAGES,
+        customerId: "",
         input: { prompt }
-      } as GenerateRequest)
-    })).json() as ReplicateSDResponse[]
+      } as GenerateAIImageRequest)
+    })).json() as ReplicateStableDiffusionResponse[]
 
     console.log(response)
     setGenerateResult([...response])
   }
     
-  //let url = '/api/userid/replicate/stablediffusion/jfxln7xypfd27fbzmnai3r7dmy'
   const reloadImage = async (serviceId: string, index: number) => {
-    let url = `/api/userid/replicate/stablediffusion/${serviceId}`
-    let response = await (await fetch(url)).json() as GetServiceImageData
+    let url = `/api/replicate/stablediffusion/${serviceId}`
+    let response = await (await fetch(url)).json() as AIImageResponse
     if (response.status === 'PROCESSING') { 
       setTimeout( reloadImage, 1600+(Math.random()*500), serviceId, index )
     } else if (response.status === 'ERROR') {
@@ -101,7 +99,7 @@ const Home: NextPageWithLayout = () => {
     if (generateResult.length > 0) {
       let temp = []
       for (let i=0; i<generateResult.length; i++) {
-        temp.push({id: generateResult[i].id, status: 'PROCESSING'} as GetServiceImageData)
+        temp.push({id: generateResult[i].id, status: 'PROCESSING'} as AIImageResponse)
         setTimeout( reloadImage, 2600+(Math.random()*500), generateResult[i].id, i)
       }
       setImages([...temp])
@@ -136,7 +134,7 @@ const Home: NextPageWithLayout = () => {
       />
       <meta
         property="og:image"
-        content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
+        content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
       />
     </Head>
     <div className={`${s.mainBackground}`}>

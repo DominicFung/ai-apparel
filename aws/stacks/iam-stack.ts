@@ -13,6 +13,7 @@ export class IamStack extends Stack {
     const user = new User(this, `${props.name}-User`)
 
     const aiServiceTableArn = Fn.importValue(`${props.name}-aiServiceTableArn`)
+    const aiCustomerTableArn = Fn.importValue(`${props.name}-customerTableArn`)
     const aiProductsTableArn = Fn.importValue(`${props.name}-productTableArn`)
     const aiOrderItemTableArn = Fn.importValue(`${props.name}-orderItemTableArn`)
     const aiOrderTableArn = Fn.importValue(`${props.name}-orderTableArn`)
@@ -25,7 +26,8 @@ export class IamStack extends Stack {
             aiServiceTableArn, `${aiServiceTableArn}*`,
             aiProductsTableArn, `${aiProductsTableArn}*`,
             aiOrderItemTableArn, `${aiOrderItemTableArn}*`,
-            aiOrderTableArn, `${aiOrderTableArn}*`
+            aiOrderTableArn, `${aiOrderTableArn}*`,
+            aiCustomerTableArn, `${aiCustomerTableArn}*`
           ],
           actions: [
             'dynamodb:*'

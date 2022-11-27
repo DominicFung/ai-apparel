@@ -1,5 +1,6 @@
-import { LocationBasedVariant } from "../pages/api/[userId]/printify/variants";
-import { OrderItem } from "../pages/api/[userId]/printify/order/single";
+import { OrderItem } from "../types/order";
+import { LocationBasedVariant } from "../types/printify";
+
 
 export const validateEmail = (email: string) => {
   const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -29,12 +30,12 @@ export const markup = (u: LocationBasedVariant): LocationBasedVariant => {
 export const calculatePrice = (ois: OrderItem[]): number => {
   let price = 0 // in cents
   let usedProvider: string[] = []
-
   for (let oi of ois) {
     let lookup = oi.varients
     for (let c of oi.choice) {
       for (let l of lookup) {
         if (l.id === c.variantId) {
+          price += l.price
           if (usedProvider.includes(oi.printProviderId)) {
             price += (l.additionalCost) * c.quantity
           } else {

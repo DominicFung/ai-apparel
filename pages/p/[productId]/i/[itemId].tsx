@@ -7,29 +7,22 @@ import namedColors from 'color-name-list'
 
 import { Tooltip } from "@material-tailwind/react"
 
-import { GetServiceImageData } from '../../../api/[userId]/replicate/stablediffusion/[serviceId]'
-import { Product } from '../../../api/products/[productId]'
-import { GetProviderCostRequest, LocationBasedVariant, ProviderLocationVariant } from '../../../api/[userId]/printify/variants'
 import Drawer from '../../../../components/drawer'
 import Payment from '../../../../components/payment'
-import { LineItem, OrderItem, SingleItemRequest } from '../../../api/[userId]/printify/order/single'
-import { SRResponse, SuperResolutionRequest } from '../../../api/[userId]/replicate/rudalle-sr/generate'
+
 import { NextPageWithLayout } from '../../../_app'
 import DefaultLayout from '../../../../components/layouts/default'
-import { MockResponse } from '../../../api/[userId]/mockup/[serviceId]'
-import { PrintifyMock } from '../../../api/[userId]/printify/mockup/[itemId]'
-import { Upload } from '../../../api/[userId]/printify/mockup/upload'
-import { PrintifyImageUploadResponse } from '../../../../utils/testUpload'
 
 import manualColors from '../../../../color.json'
 import Head from 'next/head'
 
+import { AIImageResponse, SuperResolutionRequest, SuperResolutionResponse, AIService } from '../../../../types/replicate'
+import { Product } from '../../../../types/product'
+import { LocationBasedVariant, MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyMockRequest, PrintifyMockResponse, Variant, VariantRequest, VariantResponse } from '../../../../types/printify'
+import { LineItem, OrderItem, OrderItemRequest } from '../../../../types/order'
+
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
-
-function cfl(string: string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
 
 interface Sizes {
   [size: string]: { 
@@ -37,17 +30,19 @@ interface Sizes {
     color: { name: string, hex: string } }[]
 }
 const _ENV = 'Dev' as 'Dev' | 'Production'
+
 const Item: NextPageWithLayout = () => {
   const router = useRouter()
   const { productId, itemId } = router.query
 
-  const [aiimage, setAIImage] = useState<GetServiceImageData>()
-  const [printifyUploaoId, setPrintifyUploaoId] = useState<string>()
+  const [aiimage, setAIImage] = useState<AIImageResponse>()
   const [product, setProduct] = useState<Product>()
-  const [providerVariant, setProviderVariant] = useState<ProviderLocationVariant>()
+  const [printifyUpload, setPrintifyUpload] = useState<MockUploadToPrintifyResponse>()
+  const [providerVariant, setProviderVariant] = useState<VariantResponse>()
+  const [service, setService] = useState<AIService>()
 
-  const [ mockPreview, setMockPreviews ] = useState<(MockResponse|null)[]>([])
-  const [ mockImages, setMockImages ] = useState<(MockResponse|null)[]>([])
+  const [ mockPreview, setMockPreviews ] = useState<(PrintifyMockResponse|null)[]>([])
+  const [ mockImages, setMockImages ] = useState<(PrintifyMockResponse|null)[]>([])
   
 
   //** Belongs to storeItem */
@@ -65,16 +60,14 @@ const Item: NextPageWithLayout = () => {
   const [ colorChoices, setColorChoices ] = useState<number[]>([0])
   const [ customInstructions, setCustomInstructions ] = useState<string[]>([""])
 
-  const [ isUpdateCart, setIsUpdateCart ] = useState(false)
-
   const [ paymentDrawerOpen, setPaymentDrawerOpen ] = useState(false)
   const [ orderItem, setOrderItem ] = useState<OrderItem>()
   const [ fullImageServiceId, setFullImageServiceId ] = useState<string>()
 
   /** AI Image */
   const getImage = async (serviceId: string) => {
-    let url = `/api/userid/replicate/stablediffusion/${serviceId}`
-    let response = await (await fetch(url)).json() as GetServiceImageData
+    let url = `/api/replicate/stablediffusion/${serviceId}`
+    let response = await (await fetch(url)).json() as AIImageResponse
     if (response.status === 'PROCESSING') { 
       setTimeout( getImage, 600+(Math.random()*500), serviceId )
     }
@@ -88,8 +81,8 @@ const Item: NextPageWithLayout = () => {
     getCostPerVarient(product)
   }
 
-  const populateFullMockImage = async (p: Product, v: LocationBasedVariant, index: number, printifyUploaoId: string) => {
-    const url = `/api/userid/printify/mockup/${itemId}`
+  const populateFullMockImage = async (p: Product, v: LocationBasedVariant, index: number, pu: MockUploadToPrintifyResponse) => {
+    const url = `/api/printify/mockup/${itemId}`
     const i = v.mockup.cameras[index]
     const response = await (await fetch(url, {
       method: 'POST',
@@ -99,21 +92,21 @@ const Item: NextPageWithLayout = () => {
         variantId: v.id,
         cameraId: i.camera_id,
         size: 'full',
-        imageId: printifyUploaoId
-      } as PrintifyMock)
-    })).json() as MockResponse
+        images: pu.images
+      } as PrintifyMockRequest)
+    })).json() as PrintifyMockResponse
 
     let temp = mockImages
     temp[index] = response
     setMockImages([...temp])
   }
 
-  const populateMockImages = async (p: Product, v: LocationBasedVariant, printifyUploaoId: string) => {
+  const populateMockImages = async (p: Product, v: LocationBasedVariant, pu: MockUploadToPrintifyResponse) => {
     let a = []
     if (v.mockup.cameras.length > 0) {
       let c = v.mockup.cameras
       for (let i of c) {
-        const url = `/api/userid/printify/mockup/${itemId}`
+        const url = `/api/printify/mockup/${itemId}`
         const response = fetch(url, {
           method: 'POST',
           body: JSON.stringify({
@@ -122,8 +115,8 @@ const Item: NextPageWithLayout = () => {
             variantId: v.id,
             cameraId: i.camera_id,
             size: 'preview',
-            imageId: printifyUploaoId
-          } as PrintifyMock)
+            images: pu.images
+          } as PrintifyMockRequest)
         })
 
         a.push(response)
@@ -132,7 +125,7 @@ const Item: NextPageWithLayout = () => {
       Promise.all(a).then( async a => {
         let previews = [], full = []
         for (let i of a) {
-          previews.push( await i.json() as MockResponse )
+          previews.push( await i.json() as PrintifyMockResponse )
           full.push(null)
         }
         setMockPreviews(previews)
@@ -145,34 +138,32 @@ const Item: NextPageWithLayout = () => {
     if (product.platform === "printify") {
       let geo: {ip: string} | undefined
       if (_ENV === 'Production') {
-        let geourl = `https://api.ipify.org?format=json`
-        let geo = await (await fetch(geourl)).json() as {ip: string}
-        console.log(geo)
+        
       }
       
-      let url = `/api/userid/printify/variants`
+      let url = `/api/printify/variants`
       let productId =Number(product.productId)
       console.log(productId)
 
-      let body: GetProviderCostRequest
+      let body: VariantRequest
       if (geo) {
         body = {
           blueprintId: productId,
           printprovider: product.printprovider,
           ip: geo.ip
-        } as GetProviderCostRequest
+        } as VariantRequest
       } else {
         body = {
           blueprintId: productId,
           printprovider: product.printprovider,
           country: 'CA'
-        } as GetProviderCostRequest
+        } as VariantRequest
       }
       
       let response = await (await fetch(url, {
         method: "POST",
         body: JSON.stringify(body)
-      })).json() as ProviderLocationVariant
+      })).json() as VariantResponse
 
       setProviderVariant(response)
 
@@ -255,14 +246,14 @@ const Item: NextPageWithLayout = () => {
   }, [quantityText, colorChoices, customInstructions, sizeChoices, sizes, tab])
 
   const generateHQImage = async () => {
-    let url = `/api/userid/replicate/rudalle-sr/generate`
+    let url = `/api/replicate/rudalle-sr/generate`
     let response = await (await fetch(url, {
       method: 'POST',
       body: JSON.stringify({
         stablediffusionId: itemId,
         input: { scale: 8 }
       } as SuperResolutionRequest)
-    })).json() as SRResponse
+    })).json() as SuperResolutionResponse
 
     return response
   }
@@ -299,9 +290,9 @@ const Item: NextPageWithLayout = () => {
       printProviderId: providerVariant?.id.toString(),
       varients: providerVariant?.locationVariant,
       choice: lineItems
-    } as SingleItemRequest
+    } as OrderItemRequest
 
-    let url = `/api/userid/printify/order/single`
+    let url = `/api/printify/order/single`
     let response = await (await fetch(url, {
       method: "POST",
       body: JSON.stringify(orderItem)
@@ -315,15 +306,16 @@ const Item: NextPageWithLayout = () => {
   }
 
   const putPrintifyImage = async (itemId: string, productId: string, providerId: string) => {
-    const url = `/api/userid/printify/mockup/upload`
+    const url = `/api/printify/mockup/upload`
     let response = await (await fetch(url, {
       method: "POST",
       body: JSON.stringify({ 
         itemId, productId, providerId
-      } as Upload)
-    })).json() as PrintifyImageUploadResponse
+      } as MockUploadToPrintifyRequest)
+    })).json() as MockUploadToPrintifyResponse
     console.log(response)
-    setPrintifyUploaoId(response.id)
+    
+    setPrintifyUpload(response)
   }
   
   useEffect(() => {
@@ -341,46 +333,46 @@ const Item: NextPageWithLayout = () => {
 
   // Generate PREVIEW IMAGES
   useEffect(() => {
-    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUploaoId) {
+    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUpload) {
       const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
       let variant = providerVariant.locationVariant[0]
       for (let v of providerVariant.locationVariant) {
         if (v.id === vid){ variant=v; break }
       }
-      populateMockImages(product, variant, printifyUploaoId)
+      populateMockImages(product, variant, printifyUpload)
     }
-  }, [product, itemId, providerVariant, tab, sizeChoices, colorChoices, sizes, printifyUploaoId])
+  }, [product, itemId, providerVariant, tab, sizeChoices, colorChoices, sizes, printifyUpload])
 
   // Generate FULL Image
   useEffect(() => {
-    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUploaoId && mockPreview.length > 0) {
+    if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUpload && mockPreview.length > 0) {
       const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
       let variant = providerVariant.locationVariant[0]
       for (let v of providerVariant.locationVariant) {
         if (v.id === vid){ variant=v; break }
       }
-      populateFullMockImage(product, variant, pictureIndex, printifyUploaoId)
+      populateFullMockImage(product, variant, pictureIndex, printifyUpload)
     }
-  }, [product, providerVariant, mockPreview, pictureIndex, tab, sizeChoices, colorChoices, sizes, printifyUploaoId])
+  }, [product, providerVariant, mockPreview, pictureIndex, tab, sizeChoices, colorChoices, sizes, printifyUpload])
 
   return (<>
     <Head>
       <title>
-        AI Apperal Store | {product?.title || "Product"}
+        AI Apperal Store | Product
       </title>
       <meta
         name="description"
-        content={`Extremely amazing AI Designed ${product ? cfl(product.type) : "Apperal"} by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
+        content={`Extremely amazing AI Designed Apperal by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
         key="desc"
       />
-      <meta property="og:title" content={`AI Apperal Store | ${product?.title || "Product"}`} />
+      <meta property="og:title" content={`AI Apperal Store | Product`} />
       <meta
         property="og:description"
-        content={`Extremely amazing AI Designed ${product ? cfl(product.type) : "Apperal"} by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
+        content={`Extremely amazing AI Designed Apperal by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
       />
       <meta
         property="og:image"
-        content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/userid/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
+        content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
       />
     </Head>
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
@@ -533,6 +525,17 @@ const Item: NextPageWithLayout = () => {
 
                 <div className="mb-4">
                   <label className="block text-gray-50 text-sm font-bold mb-2" htmlFor="username">
+                    Back / Prompt
+                  </label>
+                  <input
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    disabled={true}
+                    value={""}
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-50 text-sm font-bold mb-2" htmlFor="username">
                     Notes
                   </label>
                   <textarea rows={5}
@@ -545,30 +548,16 @@ const Item: NextPageWithLayout = () => {
                 </div>
 
                 <div className="w-full flex justify-center mb-4">
-                    <button className={`${styles.addtocartButton} bg-gray-300 hover:bg-gray-400 p-2 pr-8 pl-8 rounded`}
-                      onClick={(e) => { 
-                        e.preventDefault()
-                        if (product) {
-                          //addToCart( storeItem, colorChoices, customTexts, customInstructions )
-                        } else console.log("NO STORE ITEM!")
-                      }}
-                    >
-                      {isUpdateCart ? "Update Cart":"Add to cart"}{quantity === 1 ? "": ` (${quantity})`}
-                    </button>
-                </div>
-                <div className="w-full flex justify-center mb-4">
                   <button className={`${styles.buynowButton} text-gray-600 hover:text-gray-800 hover:bg-darkgreen hover:font-bold p-2 pr-8 pl-8 rounded`}
                     disabled={ !product || !providerVariant || !aiimage }
                     onClick={(e) => {
                       e.preventDefault()
                       if (product) {
-                        //addToCart( storeItem, colorChoices, customTexts, customInstructions )
-                        //history.push('/cart')
                         buyNow()
                       } else console.log("NO STORE ITEM!")
                     }}
                   >
-                    Buy Now!
+                    Buy Now! {quantity === 1 ? "": ` (${quantity})`}
                   </button>
                 </div>
               </div>

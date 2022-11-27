@@ -110,5 +110,26 @@ export class DynamoStack extends Stack {
       value: orderTable.tableArn,
       exportName: `${props.name}-orderTableArn`
     })
+
+    const customerTable = new Table (this, `${props.name}-customerTable`, {
+      tableName: `${props.name}-CustomerDable`,
+      partitionKey: {
+        name: `customerId`,
+        type: AttributeType.STRING
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      stream: StreamViewType.NEW_IMAGE,
+      removalPolicy: RPOLICY
+    })
+
+    new CfnOutput(this, `${props.name}-customerTableName`, {
+      value: customerTable.tableName,
+      exportName: `${props.name}-customerTableName`
+    })
+
+    new CfnOutput(this, `${props.name}-customerTableArn`, {
+      value: customerTable.tableArn,
+      exportName: `${props.name}-customerTableArn`
+    })
   }
 }
