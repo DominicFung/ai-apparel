@@ -120,10 +120,15 @@ $animationSpeed: 40s;
 
 
 
-
+.wrapper {
+  display: block;
+  padding: 0.25rem;
+  width: 0px;
+  animation: fullView 0.5s forwards linear;
+}
 
 .loadingImage {
-  width: 512px;
+  width: auto;
   height: auto;
   padding-bottom: 100%;
   background-color: #748DA6;
@@ -133,12 +138,6 @@ $animationSpeed: 40s;
   animation : shimmer 2s infinite;
   background: linear-gradient(118.54deg,#748DA6 0.66%, #748DA6 24%, #D3CEDF 25.14%, #748DA6 26%, #748DA6 91.66%);
   background-size: 1000px 100%;
-}
-
-.wrapper {
-  padding: 0.25rem;
-  width: 0px;
-  animation: fullView 0.5s forwards linear;
 }
 
 @keyframes fullView {

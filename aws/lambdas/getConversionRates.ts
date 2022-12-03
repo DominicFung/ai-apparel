@@ -21,5 +21,16 @@ export const handler = async (event: any): Promise<any> => {
   let s3Res = await client.send(command)
   console.log(s3Res)
 
+  let url2 = `https://open.er-api.com/v6/latest`
+  let res2 = await ( await fetch(url2)).json()
+
+  const command2 = new PutObjectCommand({
+    Bucket: event.bucketName,
+    Key: 'settings/conversions-usd.json',
+    Body: JSON.stringify(res2, null, 2)
+  })
+  let s3Res2 = await client.send(command2)
+  console.log(s3Res2)
+
   return {"status": "OK"}
 }

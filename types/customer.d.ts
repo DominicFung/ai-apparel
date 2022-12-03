@@ -5,7 +5,9 @@ export interface CustomerRequest {
 }
 
 export interface CustomerResponse {
-  token: string
+  token: string,
+  currency: string,
+  exchangeRate: number
 }
 
 export interface Customer extends CustomerRequest {

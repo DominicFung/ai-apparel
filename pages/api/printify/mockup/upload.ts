@@ -13,7 +13,7 @@ import { MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyImag
 import sharp from 'sharp'
 
 import path from 'path';
-import { DynamoDBClient, DynamoDBClientConfig, QueryCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, DynamoDBClientConfig, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { AIService } from '../../../../types/replicate'
 
@@ -36,18 +36,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   let client = new DynamoDBClient(config)
 
   // Get Prompt
-  const command0 = new QueryCommand({
+  const command0 = new GetItemCommand({
     TableName: cdk["AIApparel-DynamoStack"].AIApparelaiServiceTableName,
-    KeyConditionExpression: `serviceId = :serviceId`,
-    ExpressionAttributeValues: { ':serviceId': { S: b.itemId } }
+    Key: { serviceId: { S: b.itemId } }
   })
   const response0 = await client.send(command0)
-  if (!response0.Items || response0.Items.length < 1) { res.status(404); return }
-  const service = unmarshall(response0.Items![0]) as AIService
+  if (!response0.Item) { res.status(404); return }
+  const service = unmarshall(response0.Item) as AIService
 
-  console.log(service.response)
+  //console.log(service.response)
   const sr = JSON.parse(service.response) as { input: { prompt: string } }
-  console.log(`prompt: ${sr.input.prompt}`)
+  //console.log(`prompt: ${sr.input.prompt}`)
 
   let s3Config = {} as S3ClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
@@ -86,15 +85,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       position: 'front'
     })
 
-    console.log(" == Here 1 ==")
-
     const fileName = `temp.png`
     if (!fs.existsSync(path.join(process.cwd(), 'tmp')))
       fs.mkdirSync(path.join(process.cwd(), 'tmp'))
 
     await sharp({
       text: {
-        // text: 'Hello, world!',
         width: 1000,
         height: 500,
         text: `<i>"${sr.input.prompt}"</i>`,
@@ -107,8 +103,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }).toFile(
       path.join(process.cwd(), 'tmp', fileName)
     )
-
-    console.log(" == Here 2 ==")
 
     const stream = fs.createReadStream(path.join(process.cwd(), 'tmp', fileName))
     p.push( await uploadToPrintifyImages(stream, cookies) )
@@ -127,7 +121,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       track[i].image.id = p[i].id
       r.images.push(track[i])
     }
-    console.log(JSON.stringify(r, null, 2))
+    //console.log(JSON.stringify(r, null, 2))
     res.json(r)
   }
 }

@@ -66,6 +66,7 @@ export interface AIImageResponse {
   id: string
   status: "COMPLETE" | "PROCESSING" | "ERROR"
   url?: string
+  prompt?: string
 }
 
 /** AI Service Table */

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import styles from '../../../../styles/Item.module.scss'
+import { animateScroll } from 'react-scroll'
 
 import namedColors from 'color-name-list'
 
@@ -16,7 +17,7 @@ import DefaultLayout from '../../../../components/layouts/default'
 import manualColors from '../../../../color.json'
 import Head from 'next/head'
 
-import { AIImageResponse, SuperResolutionRequest, SuperResolutionResponse, AIService } from '../../../../types/replicate'
+import { AIImageResponse, SuperResolutionRequest, SuperResolutionResponse } from '../../../../types/replicate'
 import { Product } from '../../../../types/product'
 import { LocationBasedVariant, MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyMockRequest, PrintifyMockResponse, Variant, VariantRequest, VariantResponse } from '../../../../types/printify'
 import { LineItem, OrderItem, OrderItemRequest } from '../../../../types/order'
@@ -25,13 +26,17 @@ import { LineItem, OrderItem, OrderItemRequest } from '../../../../types/order'
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
 
 interface Sizes {
-  [size: string]: { 
-    variantId: number, 
-    color: { name: string, hex: string } }[]
+  [size: string]: {
+    disabled: boolean
+    variant: {
+      variantId: number,
+      color: { name: string, hex: string, price: number | null } 
+    }[]
+  }
 }
 const _ENV = 'Dev' as 'Dev' | 'Production'
 
-const Item: NextPageWithLayout = () => {
+const Item: NextPageWithLayout = (props) => {
   const router = useRouter()
   const { productId, itemId } = router.query
 
@@ -39,12 +44,10 @@ const Item: NextPageWithLayout = () => {
   const [product, setProduct] = useState<Product>()
   const [printifyUpload, setPrintifyUpload] = useState<MockUploadToPrintifyResponse>()
   const [providerVariant, setProviderVariant] = useState<VariantResponse>()
-  const [service, setService] = useState<AIService>()
 
   const [ mockPreview, setMockPreviews ] = useState<(PrintifyMockResponse|null)[]>([])
   const [ mockImages, setMockImages ] = useState<(PrintifyMockResponse|null)[]>([])
   
-
   //** Belongs to storeItem */
   const [ price, setPrice ] = useState(0)
   const [ currency, setCurrency ] = useState('USD')
@@ -171,34 +174,32 @@ const Item: NextPageWithLayout = () => {
        * List all variants for user, this will be a size based menu. 
        * Each size must be UNIQUE. We're going to generate a new key structure.*/
       let sizes: Sizes = {}
+
       for (let v of response.locationVariant) {
         if (!Object.keys(sizes).includes(v.options.size)) {
-          sizes[v.options.size] = []
+          sizes[v.options.size] = { variant: [], disabled: true }
         }
 
         let c = namedColors.find( color => color.name === v.options.color )
-        if (c) sizes[v.options.size].push({variantId: v.id, color: c})
-        else if (manualColors[v.options.color])
-        sizes[v.options.size].push({variantId: v.id, color: { name: v.options.color, hex: manualColors[v.options.color] }})
-        else sizes[v.options.size].push({variantId: v.id, color: { name: v.options.color, hex: "" }})
+        if (v.price) sizes[v.options.size].disabled = false
+        if (c) {
+          sizes[v.options.size].variant.push({variantId: v.id, color: { ...c, price: v.price } })
+        } else if (manualColors[v.options.color]) {
+          sizes[v.options.size].variant.push({variantId: v.id, color: { name: v.options.color, hex: manualColors[v.options.color], price: v.price }})
+        } else sizes[v.options.size].variant.push({variantId: v.id, color: { name: v.options.color, hex: "", price: v.price }})
       }
+
       setSizes(sizes)
+      let keys = Object.keys(sizes)
+      let iks = keys[0]
 
-      let iks = Object.keys(sizes)[0]
-      setSizeChoices([iks])
-
-      // Some varients dont have prices ....
-      // Also, this is the wrong way to do pricing
-
-      for (let variant of response.locationVariant) {
-        console.log(`price: ${variant.price}`)
-        if (variant.price) {
-          setPrice(variant.price + variant.firstCost)
-          setCurrency(variant.currency)
-          break
-        }
-
+      for (let i=0; i<keys.length; i++) {
+        if (!sizes[keys[i]].disabled) { iks = keys[i]; break }
       }
+
+      console.log(sizes)
+      console.log(iks)
+      setSizeChoices([iks])
     }
   }
 
@@ -320,6 +321,7 @@ const Item: NextPageWithLayout = () => {
   
   useEffect(() => {
     if (productId && itemId) {
+      animateScroll.scrollToTop()
       getProduct(productId as string)
       getImage(itemId as string)
     }
@@ -334,7 +336,7 @@ const Item: NextPageWithLayout = () => {
   // Generate PREVIEW IMAGES
   useEffect(() => {
     if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUpload) {
-      const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
+      const vid = sizes[sizeChoices[tab]].variant[colorChoices[tab]].variantId
       let variant = providerVariant.locationVariant[0]
       for (let v of providerVariant.locationVariant) {
         if (v.id === vid){ variant=v; break }
@@ -346,7 +348,7 @@ const Item: NextPageWithLayout = () => {
   // Generate FULL Image
   useEffect(() => {
     if (product && providerVariant && tab >= 0 && sizes && sizeChoices.length > 0 && colorChoices.length > 0 && printifyUpload && mockPreview.length > 0) {
-      const vid = sizes[sizeChoices[tab]][colorChoices[tab]].variantId
+      const vid = sizes[sizeChoices[tab]].variant[colorChoices[tab]].variantId
       let variant = providerVariant.locationVariant[0]
       for (let v of providerVariant.locationVariant) {
         if (v.id === vid){ variant=v; break }
@@ -354,6 +356,19 @@ const Item: NextPageWithLayout = () => {
       populateFullMockImage(product, variant, pictureIndex, printifyUpload)
     }
   }, [product, providerVariant, mockPreview, pictureIndex, tab, sizeChoices, colorChoices, sizes, printifyUpload])
+
+  useEffect(() => {
+    if (sizeChoices.length > 0 && colorChoices.length > 0 && props.customer) {
+      let price = 0
+      for (let i in sizeChoices) {
+        const s = sizes[sizeChoices[i]]
+        console.log(s)
+        price += s.variant[colorChoices[i]].color.price! * props.customer.exchangeRate
+      }
+      setPrice(price)
+      setCurrency(props.customer.currency)
+    }
+  }, [sizeChoices, colorChoices, quantity, props.customer])
 
   return (<>
     <Head>
@@ -483,14 +498,15 @@ const Item: NextPageWithLayout = () => {
                     {
                       Object.keys(sizes).map((v, i) => {
                         return (
-                          <span key={i} className={`${styles.addtocartButton} rounded p-1 px-2 mr-1 inline-flex items-center justify-center bg-gray-300 hover:cursor-pointer border-2 my-1 hover:border-white`}
+                          <button key={i} className={`${styles.addtocartButton} rounded p-1 px-2 mr-1 inline-flex items-center justify-center bg-gray-300 hover:cursor-pointer border-2 my-1 hover:border-white`}
                             style={{borderColor: sizeChoices[tab] === v ? "white" : "", color: sizeChoices[tab] === v ? "white" : "" }}
+                            disabled={sizes[sizeChoices[tab]].disabled}
                             onClick={() => { 
                               sizeChoices[tab] = v
                               setSizeChoices([...sizeChoices])
                             }}>
                               {v}
-                          </span>
+                          </button>
                         )
                       })
                     }
@@ -503,7 +519,7 @@ const Item: NextPageWithLayout = () => {
                   </label>
                   <div className="mb-4 pb-4">
                     {
-                      sizes[sizeChoices[tab]]?.map((v, i) => {
+                      sizes[sizeChoices[tab]]?.variant.map((v, i) => {
                         return (
                           <Tooltip content={<span className='bg-gray-700 p-2 rounded'>{v.color.name}</span>} key={i}>
                             <span
@@ -528,9 +544,9 @@ const Item: NextPageWithLayout = () => {
                     Back / Prompt
                   </label>
                   <input
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:shadow-outline"
                     disabled={true}
-                    value={""}
+                    value={aiimage?.prompt || ""}
                   />
                 </div>
 

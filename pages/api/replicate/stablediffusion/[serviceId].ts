@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fromIni } from '@aws-sdk/credential-provider-ini'
-import { DynamoDBClient, DynamoDBClientConfig, UpdateItemCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, DynamoDBClientConfig, GetItemCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb'
 import { S3Client, S3ClientConfig, PutObjectCommand } from '@aws-sdk/client-s3'
 import { got } from 'got'
 
@@ -11,7 +11,8 @@ import config from "../../../../src/aws-exports"
 import { Amplify } from "aws-amplify"
 Amplify.configure({...config, ssr: true })
 
-import { ReplicateStableDiffusionResponse, AIImageResponse } from '../../../../types/replicate'
+import { ReplicateStableDiffusionResponse, AIImageResponse, AIService } from '../../../../types/replicate'
+import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<AIImageResponse>) {
   const serviceId = req.query.serviceId as string
@@ -66,12 +67,28 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<A
       }
     })
     promise.push(client.send(command))
+
+    const command0 = new GetItemCommand({
+      TableName: cdk["AIApparel-DynamoStack"].AIApparelaiServiceTableName,
+      Key: { serviceId: { S: serviceId } }
+    })
+    const response0 = await client.send(command0)
+    if (!response0.Item) { res.status(404); return }
+    const service = unmarshall(response0.Item) as AIService
+
+    // console.log(service.response)
+    const sr = JSON.parse(service.response) as { input: { prompt: string } }
+    // console.log(`prompt: ${sr.input.prompt}`)
+
     Promise.all(promise)
+
     res.status(200).json({
       id: serviceId,
       status: "COMPLETE",
-      url: result.output[0]
+      url: result.output[0],
+      prompt: sr.input.prompt
     })
+    
   } else if (result.status === 'failed') {
     const command = new UpdateItemCommand({
       TableName: cdk["AIApparel-DynamoStack"].AIApparelaiServiceTableName,

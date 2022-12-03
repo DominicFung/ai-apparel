@@ -70,24 +70,23 @@ const Home: NextPageWithLayout = (props) => {
     console.log(response)
     setGenerateResult([...response])
   }
-    
-  const reloadImage = async (serviceId: string, index: number) => {
-    let url = `/api/replicate/stablediffusion/${serviceId}`
-    let response = await (await fetch(url)).json() as AIImageResponse
-    if (response.status === 'PROCESSING') { 
-      setTimeout( reloadImage, 1600+(Math.random()*500), serviceId, index )
-    } else if (response.status === 'ERROR') {
-      console.error(`Stable Diffusion encountered an error, Replicate.io service ID: ${response.id}`)
-    } else {
-      images[index] = response
-      setImages([...images])
 
-      let isLoading = false
-      for (let i of images) {
-        if (i.status !== 'COMPLETE'){ isLoading=true; break }
+  const reloadImages = async (oldImgs: AIImageResponse[]) => {
+    let newImgs = []
+    let loading = false
+    
+    for (let i of oldImgs) {
+      let url = `/api/replicate/stablediffusion/${i.id}`
+      const response = await (await fetch(url)).json() as AIImageResponse
+      newImgs.push(response)
+      if (response.status !== 'COMPLETE') { 
+        loading = true
+        setTimeout( reloadImages, 1600+(Math.random()*500), newImgs )
       }
-      setLoading(isLoading)
     }
+
+    setImages([... newImgs])
+    setLoading(loading)
   }
 
   const selectAiImage = (itemId: string) => {
@@ -100,8 +99,9 @@ const Home: NextPageWithLayout = (props) => {
       let temp = []
       for (let i=0; i<generateResult.length; i++) {
         temp.push({id: generateResult[i].id, status: 'PROCESSING'} as AIImageResponse)
-        setTimeout( reloadImage, 2600+(Math.random()*500), generateResult[i].id, i)
       }
+
+      setTimeout( reloadImages, 2600+(Math.random()*500), temp)
       setImages([...temp])
       scroller.scrollTo("aiimages", {
         duration: 1500,
@@ -246,7 +246,7 @@ const Home: NextPageWithLayout = (props) => {
       {images.length > 0 && <div className='flex justify-center'>
         <Element name="aiimages">
           <div className='block lg:hidden w-screen overflow-x-hidden p-5'>
-          <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
+            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
             <Swiper
               spaceBetween={20}
               slidesPerView={1}
@@ -259,7 +259,7 @@ const Home: NextPageWithLayout = (props) => {
               {images.map((i, e) => {
                 if (i && i.status === 'COMPLETE' && i.url) {
                   return (
-                    <SwiperSlide key={i.id}>
+                    <SwiperSlide key={i.id} style={{display: "flex", justifyContent: "center"}}>
                       <span className={s.aiImage} key={i.id} onClick={() => { selectAiImage(i.id) }}>
                         <Image src={i.url} width={512} height={512} objectFit={'contain'} alt={`AI Image ${e} ${i.id}`}/>
                       </span>
@@ -278,7 +278,7 @@ const Home: NextPageWithLayout = (props) => {
             </Swiper>
           </div>
           <div className='max-w-screen-2xl hidden lg:block'>
-            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
+            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20 w-screen`}>Results!</h2>
             <div className='grid grid-cols-3 gap-3 px-20 py-2'>
               {images.map((i, e) => {
                 if (i && i.status === 'COMPLETE' && i.url) {
@@ -290,7 +290,7 @@ const Home: NextPageWithLayout = (props) => {
                     </span>)
                 } else {
                   return (
-                    <div className={s.wrapper} key={i.id}>
+                    <div className={`${s.wrapper}`} key={i.id}>
                       <div key={e} className={`${s.loadingImage} ${s.animate}`} />
                     </div>
                   )
@@ -310,10 +310,10 @@ const Home: NextPageWithLayout = (props) => {
           </div>
           <div className='flex justify-center'>
             <div className='max-w-screen-2xl'>
-              <p className={`text-gray-50 p-1`}>
+              <p className={`text-gray-50 p-8 lg:p-1`}>
                 In August 2022, text-to-image AI art has won the first place in a digital art competition.
               </p>
-              <p className={`text-gray-50 p-1`}>
+              <p className={`text-gray-50 p-8 lg:p-1`}>
                 As Text-to-Image models get better, 
               </p>
             </div>
