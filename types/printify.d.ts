@@ -164,15 +164,19 @@ interface PrintifyOrderResponse {
 }
 
 /** Custom Request/Response, defined by me */
+interface MockImage {
+  image: PrintifyImagePreviewImage
+  position: 'front' | 'back',
+  color: 'black' | 'white' | 'na'
+}
+
 interface PrintifyMockRequest {
   printProviderId: number
   cameraId: number
   variantId: number
+  baseColorHex: string // hex
   blueprintId: number
-  images: {
-    image: PrintifyImagePreviewImage
-    position: 'front' | 'back'
-  }[]
+  images: MockImage[]
   size: 'preview'|'full'
 }
 
@@ -183,8 +187,6 @@ interface PrintifyMockResponse {
 interface VariantRequest {
   blueprintId: number
   printprovider: number
-  country?: CountryCode
-  ip?: string
 }
 
 interface VariantResponse extends PrintProvider {
@@ -209,8 +211,5 @@ export interface MockUploadToPrintifyRequest {
 }
 
 export interface MockUploadToPrintifyResponse {
-  images: {
-    image: PrintifyImagePreviewImage
-    position: 'front' | 'back'
-  }[]
+  images: MockImage[]
 }

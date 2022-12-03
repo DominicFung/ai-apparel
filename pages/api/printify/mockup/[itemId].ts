@@ -8,9 +8,19 @@ import config from "../../../../src/aws-exports"
 
 import { PrintifyImagePreview, PrintifyImagePreviewImage, PrintifyMockRequest, PrintifyMockResponse } from '../../../../types/printify'
 
+const isBright = (color: string): boolean => {
+  const hex = color.replace('#', '');
+  const c_r = parseInt(hex.substring(0, 0 + 2), 16);
+  const c_g = parseInt(hex.substring(2, 2 + 2), 16);
+  const c_b = parseInt(hex.substring(4, 4 + 2), 16);
+  const brightness = ((c_r * 299) + (c_g * 587) + (c_b * 114)) / 1000;
+  return brightness > 155;
+}
+
 export default async function handler(req: NextApiRequest,res: NextApiResponse<PrintifyMockResponse>) {
   const { itemId } = req.query
   const b = JSON.parse(req.body) as PrintifyMockRequest
+  //console.log(JSON.stringify(b.images, null, 2))
 
   let s3Config = {} as S3ClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
@@ -51,12 +61,20 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
     let fronts = [] as PrintifyImagePreviewImage[]
     let backs = [] as PrintifyImagePreviewImage[]
     for (let i of b.images) {
+      //console.log(`${i.position} ${i.color}`)
       if (i.position === 'front') { 
-        fronts.push(i.image)
+        fronts.push(i.image); continue
       } else if (i.position === 'back') { 
-        backs.push(i.image)
+        let light = isBright(b.baseColorHex)
+        if (i.color === 'white' && !light) {
+          backs.push(i.image); continue
+        } else if (i.color === 'black' && light) {
+          backs.push(i.image); continue
+        } // else { console.error(`text and background matching failed. ${b.baseColorHex} text Color: ${i.color}, shirt is bright?: ${light}`) }
       } else { console.error(`position not found: ${i.position}`) }
     }
+
+    console.log(backs)
     
     p.print.placeholders.push({
       dom_id: ["#placeholder_back"],

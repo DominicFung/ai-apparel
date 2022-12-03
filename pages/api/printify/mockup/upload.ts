@@ -6,10 +6,9 @@ import { S3Client, S3ClientConfig, GetObjectCommand } from '@aws-sdk/client-s3'
 import fs from 'fs'
 
 import cdk from '../../../../cdk-outputs.json'
-import config from "../../../../src/aws-exports"
 
 import { CookieShape, PrintifyImageUploadResponse, uploadToPrintifyImages } from '../../../../utils/printify'
-import { MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyImagePreviewImage } from '../../../../types/printify'
+import { MockImage, MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyImagePreviewImage } from '../../../../types/printify'
 import sharp from 'sharp'
 
 import path from 'path';
@@ -75,17 +74,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (!cookieRaw) { console.error(`cookies not found in settings/cookies.json`); res.status(401); return }
     let cookies = JSON.parse(cookieRaw) as CookieShape[]
 
-    //let promises = [] as Promise<PrintifyImageUploadResponse>[]
-    let p = [] as PrintifyImageUploadResponse[]
-    let track = [] as {image: PrintifyImagePreviewImage, position: 'front'|'back'}[]
+    let promises = [] as Promise<PrintifyImageUploadResponse>[]
+    //let p = [] as PrintifyImageUploadResponse[]
+    let track = [] as MockImage[]
 
-    p.push( await uploadToPrintifyImages(response.Body as ReadableStream<any>, cookies))
+    promises.push( uploadToPrintifyImages(response.Body as ReadableStream<any>, cookies))
     track.push({
       image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
-      position: 'front'
-    })
+      position: 'front',
+      color: 'na'
+    } as MockImage)
 
-    const fileName = `temp.png`
+    const darkFileName = `darktemp.png`
+    const lightFileName = `lighttemp.png`
     if (!fs.existsSync(path.join(process.cwd(), 'tmp')))
       fs.mkdirSync(path.join(process.cwd(), 'tmp'))
 
@@ -101,27 +102,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         rgba: true
       }
     }).toFile(
-      path.join(process.cwd(), 'tmp', fileName)
+      path.join(process.cwd(), 'tmp', darkFileName)
     )
 
-    const stream = fs.createReadStream(path.join(process.cwd(), 'tmp', fileName))
-    p.push( await uploadToPrintifyImages(stream, cookies) )
+    await sharp({
+      text: {
+        width: 1000,
+        height: 500,
+        text: `<span foreground="white" style="italic">"${sr.input.prompt}"</span>`,
+        font: 'Quicksand',
+        fontfile: path.join(process.cwd(), 'fonts', 'Quicksand-VariableFont_wght.ttf'),
+        align: 'center',
+        justify: true,
+        rgba: true
+      }
+    }).toFile(
+      path.join(process.cwd(), 'tmp', lightFileName)
+    )
+
+    const stream1 = fs.createReadStream(path.join(process.cwd(), 'tmp', darkFileName))
+    const stream2 = fs.createReadStream(path.join(process.cwd(), 'tmp', lightFileName))
+    
+    promises.push( uploadToPrintifyImages(stream1, cookies) )
     track.push({
       image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
-      position: 'back'
-    })
+      position: 'back',
+      color: 'black'
+    } as MockImage)
+
+    promises.push( uploadToPrintifyImages(stream2, cookies) )
+    track.push({
+      image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
+      position: 'back',
+      color: 'white'
+    } as MockImage)
 
     // let logo = fs.createReadStream(join(__dirname, '../../../', './assets/Logo-Light.png'))
     // backPromises.push(uploadToPrintifyImages(logo, cookies))
     
-    //const p = await Promise.all(promises)
+    const p = await Promise.all(promises)
 
     let r = { images: [] } as MockUploadToPrintifyResponse
     for (let i in track) { 
       track[i].image.id = p[i].id
       r.images.push(track[i])
     }
-    //console.log(JSON.stringify(r, null, 2))
+    // console.log(JSON.stringify(r, null, 2))
     res.json(r)
   }
 }

@@ -1,4 +1,4 @@
-import { OrderItem } from "../pages/api/[userId]/printify/order/single"
+import { OrderItem } from "../types/order"
 
 export const storeItems = (productId: string, obj: any[]) => {
   const temp = localStorage.getItem('cart')

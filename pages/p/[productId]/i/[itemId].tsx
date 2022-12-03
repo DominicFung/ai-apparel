@@ -36,6 +36,13 @@ interface Sizes {
 }
 const _ENV = 'Dev' as 'Dev' | 'Production'
 
+const colorNameToHex = (color: string): string => {
+  let c = namedColors.find( c => c.name === color )
+  if (c) return c.hex
+  else if ( manualColors[color] ) return manualColors[color]
+  else return ""
+}
+
 const Item: NextPageWithLayout = (props) => {
   const router = useRouter()
   const { productId, itemId } = router.query
@@ -87,6 +94,8 @@ const Item: NextPageWithLayout = (props) => {
   const populateFullMockImage = async (p: Product, v: LocationBasedVariant, index: number, pu: MockUploadToPrintifyResponse) => {
     const url = `/api/printify/mockup/${itemId}`
     const i = v.mockup.cameras[index]
+    const colorName = colorNameToHex(v.options.color)
+
     const response = await (await fetch(url, {
       method: 'POST',
       body: JSON.stringify({
@@ -95,7 +104,8 @@ const Item: NextPageWithLayout = (props) => {
         variantId: v.id,
         cameraId: i.camera_id,
         size: 'full',
-        images: pu.images
+        images: pu.images,
+        baseColorHex: colorName
       } as PrintifyMockRequest)
     })).json() as PrintifyMockResponse
 
@@ -107,6 +117,7 @@ const Item: NextPageWithLayout = (props) => {
   const populateMockImages = async (p: Product, v: LocationBasedVariant, pu: MockUploadToPrintifyResponse) => {
     let a = []
     if (v.mockup.cameras.length > 0) {
+      const colorName = colorNameToHex(v.options.color)
       let c = v.mockup.cameras
       for (let i of c) {
         const url = `/api/printify/mockup/${itemId}`
@@ -118,10 +129,10 @@ const Item: NextPageWithLayout = (props) => {
             variantId: v.id,
             cameraId: i.camera_id,
             size: 'preview',
-            images: pu.images
+            images: pu.images,
+            baseColorHex: colorName
           } as PrintifyMockRequest)
         })
-
         a.push(response)
       }
 
@@ -139,29 +150,15 @@ const Item: NextPageWithLayout = (props) => {
 
   const getCostPerVarient = async (product: Product) => {
     if (product.platform === "printify") {
-      let geo: {ip: string} | undefined
-      if (_ENV === 'Production') {
-        
-      }
       
       let url = `/api/printify/variants`
       let productId =Number(product.productId)
       console.log(productId)
 
-      let body: VariantRequest
-      if (geo) {
-        body = {
-          blueprintId: productId,
-          printprovider: product.printprovider,
-          ip: geo.ip
-        } as VariantRequest
-      } else {
-        body = {
-          blueprintId: productId,
-          printprovider: product.printprovider,
-          country: 'CA'
-        } as VariantRequest
-      }
+      const body = {
+        blueprintId: productId,
+        printprovider: product.printprovider
+      } as VariantRequest
       
       let response = await (await fetch(url, {
         method: "POST",

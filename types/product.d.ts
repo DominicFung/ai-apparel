@@ -7,7 +7,8 @@ export interface _Product {
   type: 'shirt' | 'tote' | 'hoodie',
   title: string
   description: string
-  images: ProductImageRaw[]
+  images: ProductImageRaw[],
+  markup?: number
 }
 
 interface _ProductImage {

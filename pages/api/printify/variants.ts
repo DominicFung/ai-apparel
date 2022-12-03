@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { got } from 'got'
+import Iron from '@hapi/iron'
 
 import secret from '../../../secret.json'
 import config from "../../../src/aws-exports"
@@ -10,23 +11,22 @@ import { getPrintifyWebPriceListing } from '../../../utils/printify'
 Amplify.configure({...config, ssr: true })
 
 import { CountryCode } from '../../../types/global'
-import { GeoData } from '../../../types/geodata'
 import { 
   LocationBasedVariant, PrintifyWebBlueprints, PrintifyWebCamera, 
   ProviderVarients, Shipping, VariantRequest, VariantResponse 
 } from '../../../types/printify'
+import { Customer } from '../../../types/customer'
 
 
 //https://developers.printify.com/#catalog
 export default async function handler(req: NextApiRequest,res: NextApiResponse<VariantResponse>) {
+  const token = req.cookies.token
+  if (!token) { res.status(401); return }
+
+  const customer = (await Iron.unseal(token, secret.seal, Iron.defaults)) as Customer
+
   let b = JSON.parse(req.body) as VariantRequest
-  let countryCode: CountryCode = 'US'
-  if (b.ip) {
-    let geo = await got.get(`https://api.ipgeolocation.io/ipgeo?apiKey=${secret.ipgeolocation.token}&ip=${b.ip}`).json() as GeoData
-    countryCode = geo.country_code2
-  } else if (b.country) {
-    countryCode = b.country
-  }
+  let countryCode: CountryCode = customer.geo.country_code2 || 'US'
   //console.log(countryCode)
   
   //console.log(`blueprintid: ${b.blueprintId}, printproviderid: ${b.printprovider}`)

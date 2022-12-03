@@ -1,12 +1,12 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 
-import { Product } from '../../pages/api/products/[productId]'
 import Link from 'next/link'
 import Image from 'next/image'
 
 import { Navigation } from 'swiper'
 import { Swiper, SwiperSlide} from 'swiper/react'
+import { Product } from '../../types/product'
 // CSS already included in index.tsx ,, 
 
 interface ProductPopupProps {
