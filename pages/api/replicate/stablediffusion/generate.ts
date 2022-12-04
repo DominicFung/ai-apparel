@@ -18,9 +18,11 @@ import { STABLEDIFF_MODEL_VERSION } from '../../../../types/constants'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<ReplicateStableDiffusionResponse[]>) {
   console.log(`GET /api/replicate/stablediffusion/generate`)
+  const token = req.cookies.token
+  if (!token) { res.status(401); return }
 
   let b = req.body as GenerateAIImageRequest
-  let c = await Iron.unseal(req.cookies.token as string, secret.seal, Iron.defaults) as Customer
+  let c = await Iron.unseal(token as string, secret.seal, Iron.defaults) as Customer
 
   console.log(b)
   console.log(c)

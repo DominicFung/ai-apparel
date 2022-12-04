@@ -5,7 +5,6 @@ import s from '../styles/Home.module.scss'
 import { Element, scroller } from 'react-scroll'
 import { BoltIcon } from '@heroicons/react/24/solid'
 
-import HomeLayout from '../components/layouts/home'
 import ProductPopup from '../components/popup/products'
 
 import { Navigation, Pagination } from 'swiper'
@@ -17,6 +16,7 @@ import 'swiper/css/pagination'
 import Head from 'next/head'
 
 import { AIImageResponse, GenerateAIImageRequest, ReplicateStableDiffusionResponse } from '../types/replicate'
+import DefaultLayout from '../components/layouts/default'
 
 const NUM_IMAGES = 3
 
@@ -221,7 +221,7 @@ const Home: NextPageWithLayout = (props) => {
             <div className='flex lg:hidden w-full justify-center'>
               <button onClick={generateImages}
                   className={`${s.actionButton} justify-center m-1 py-3 px-3 text-white rounded active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none`}
-                  disabled={loading}
+                  disabled={loading && !props.customer}
               > 
                 { loading && 
                 <div role="status" className='h-0'>
@@ -331,7 +331,7 @@ const Home: NextPageWithLayout = (props) => {
 }
 
 Home.getLayout = (children) => {
-  return <HomeLayout>{children}</HomeLayout>
+  return <DefaultLayout>{children}</DefaultLayout>
 }
 
 export default Home

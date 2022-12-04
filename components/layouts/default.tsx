@@ -19,6 +19,7 @@ export default function DefaultLayout({ children }: LayoutProps) {
   }
 
   const getNewCustomer = async () => {
+    console.log('getting new customer')
     const url = '/api/customer'
     let geo = await getGeo()
     let res = await (await fetch(url, {
@@ -32,14 +33,17 @@ export default function DefaultLayout({ children }: LayoutProps) {
   }
 
   const getOldCustomer = async () => {
+    console.log('getting old customer')
     const url = '/api/customer'
     let res = await (await fetch(url, { method: 'POST', body: JSON.stringify({}) })).json() as CustomerResponse
     console.log(`EXCHANGE RATE SET ${res.exchangeRate}`)
+    jscookie.set("token", res.token)
     setCustomer(res)
   }
 
   useEffect(() => {
-    if (jscookie.get("token")) { getNewCustomer() }
+    let token = jscookie.get("token")
+    if (!token || token === "") { getNewCustomer() }
     else { getOldCustomer() }
   }, [])
 

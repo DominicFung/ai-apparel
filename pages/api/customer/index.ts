@@ -19,7 +19,9 @@ import { Conversion } from '../../../utils/utils'
 export default async function handler(req: NextApiRequest,res: NextApiResponse<CustomerResponse>) {
   const token = req.cookies.token
   const b = JSON.parse(req.body) as CustomerRequest
-  if (!token || !b.ip) { res.status(401); return }
+  console.log(b)
+  console.log(token)
+  if (!token && !b.ip) { res.status(401); return }
 
   let config = {} as DynamoDBClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
@@ -52,7 +54,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
 
     if (token) {
       const customer = (await Iron.unseal(token, secret.seal, Iron.defaults)) as Customer
-  
       if (customer) {
         customer.lastAccess = Date.now()
         const command = new PutItemCommand({
@@ -69,6 +70,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
     }  
     
     if (b.ip) {
+      console.log(b.ip)
       let geo = await got.get(`https://api.ipgeolocation.io/ipgeo?apiKey=${secret.ipgeolocation.token}&ip=${b.ip}`).json() as GeoData
       const customer = {
         customerId: uuidv4(),
