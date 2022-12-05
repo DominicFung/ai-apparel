@@ -85,10 +85,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       color: 'na'
     } as MockImage)
 
-    const darkFileName = `darktemp.png`
-    const lightFileName = `lighttemp.png`
-    if (!fs.existsSync(path.join(process.cwd(), 'tmp')))
-      fs.mkdirSync(path.join(process.cwd(), 'tmp'))
+    const darkFileName = process.env.NODE_ENV === "production" ? `/tmp/darktemp.png` : path.join(process.cwd(), 'tmp', "darktemp.png")
+    const lightFileName = process.env.NODE_ENV == "production" ? `/tmp/lighttemp.png` : path.join(process.cwd(), 'tmp', "lighttemp.png")
+
+    // We expect AWS lambda /tmp to already be 
+    console.log(`env: ${process.env.NODE_ENV}`)
+    if (process.env.NODE_ENV !== "production")
+      if (!fs.existsSync(path.join(process.cwd(), 'tmp')))
+        fs.mkdirSync(path.join(process.cwd(), 'tmp'))
 
     await sharp({
       text: {
@@ -101,9 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         justify: true,
         rgba: true
       }
-    }).toFile(
-      path.join(process.cwd(), 'tmp', darkFileName)
-    )
+    }).toFile(darkFileName)
 
     await sharp({
       text: {
@@ -116,12 +118,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         justify: true,
         rgba: true
       }
-    }).toFile(
-      path.join(process.cwd(), 'tmp', lightFileName)
-    )
+    }).toFile(lightFileName)
 
-    const stream1 = fs.createReadStream(path.join(process.cwd(), 'tmp', darkFileName))
-    const stream2 = fs.createReadStream(path.join(process.cwd(), 'tmp', lightFileName))
+    const stream1 = fs.createReadStream(darkFileName)
+    const stream2 = fs.createReadStream(lightFileName)
     
     promises.push( uploadToPrintifyImages(stream1, cookies) )
     track.push({

@@ -91,7 +91,7 @@ export interface CookieShape {
   sourcePort: number
 }
 
-export const uploadToPrintifyImages = async (s: ReadableStream | ReadStream, cookies: CookieShape[]):Promise<PrintifyImageUploadResponse> => {
+export const uploadToPrintifyImages = async (s: ReadableStream | ReadStream , cookies: CookieShape[]):Promise<PrintifyImageUploadResponse> => {
   let data = new FormData();
   data.append('file', s);
   data.append('isListed', 'true');
