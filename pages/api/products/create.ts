@@ -10,7 +10,7 @@ import cdk from '../../../cdk-outputs.json'
 import secret from '../../../secret.json'
 
 import { ReplicateRUDalleSRResponse } from '../../../types/replicate'
-import { CreateProductRequest, _Product, _ProductImageDetails } from '../../../types/product'
+import { CreateProductRequest, _Product, _ProductImage, _ProductImageDetails } from '../../../types/product'
 import { Blueprint, PrintProvider } from '../../../types/printify'
 import { RUDALLE_MODEL_VERSION } from '../../../types/constants'
 
@@ -58,28 +58,28 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<_
     }
 
     for (let i of bp.images) {
-      let rep = await got.post("https://api.replicate.com/v1/predictions", {
-        headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
-        body: JSON.stringify({
-          version: RUDALLE_MODEL_VERSION,
-          input: { image: i, scale: 2 }
-        })
-      }).json() as ReplicateRUDalleSRResponse
-      console.log(rep)
+      // let rep = await got.post("https://api.replicate.com/v1/predictions", {
+      //   headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
+      //   body: JSON.stringify({
+      //     version: RUDALLE_MODEL_VERSION,
+      //     input: { image: i, scale: 2 }
+      //   })
+      // }).json() as ReplicateRUDalleSRResponse
+      // console.log(rep)
 
       product.images.push({
         id: uuidv4(),
-        full: {
-          externalUrl: rep.urls.get,
-          view: 'none',
-          coordinates: { top: 1, left: 1 }
-        } as _ProductImageDetails,
+        // full: {
+        //   externalUrl: rep.urls.get,
+        //   view: 'none',
+        //   coordinates: { top: 1, left: 1 }
+        // } as _ProductImageDetails,
         preview: {
           externalUrl: i,
           view: 'front',
           coordinates: { top: 1, left: 1 }
         } as _ProductImageDetails
-      })
+      } as _ProductImage)
     }
 
     const command = new PutItemCommand({

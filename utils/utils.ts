@@ -19,9 +19,7 @@ export const setIntersepter = (b: boolean) => {
 type SquareEnv = "sandbox" | "production"
 export const SQUARE_ENV: SquareEnv = process.env.NODE_ENV === "production" ? "production" : "sandbox"
 
-export const markup = (u: LocationBasedVariant, markup?: number): LocationBasedVariant => {
-  //let price = u.price * 1.5
-  //console.log(`Old Price: $${u.price/100}, New Price: ${price/100}`)
+export const markup = (u: LocationBasedVariant, markup?: number | undefined): LocationBasedVariant => {
   u.price = u.price * (markup || BASEMARKUP )
   u.firstCost = u.firstCost * 1
   u.additionalCost = u.additionalCost * 1

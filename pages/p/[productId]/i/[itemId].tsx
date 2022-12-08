@@ -423,6 +423,16 @@ const Item: NextPageWithLayout = (props) => {
         content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
       />
     </Head>
+
+    <main
+      className={
+        " fixed overflow-hidden z-50 bg-gray-900 bg-opacity-75 inset-0 transform ease-in-out " +
+        ( aiimage && product && printifyUpload && providerVariant && mockPreview.length > 0 && mockImages.length > 0 && price > 0
+          ? " transition-all delay-500 opacity-0 translate-x-full ": " transition-opacity opacity-100 duration-500 translate-x-0 "
+        )
+      }
+    ><section className=" w-screen h-full cursor-pointer " /></main>
+
     <ThankYouPopup open={thankyouOpen} setOpen={setThankyouOpen} paymentResponse={paymentResponse} />
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
       <Payment customer={props.customer} orderItem={orderItem} fullImageServiceId={fullImageServiceId} serviceId={itemId as string} setPaymentResponse={setPaymentResponse} />
@@ -459,7 +469,7 @@ const Item: NextPageWithLayout = (props) => {
                 </div>
               </div>
               <div className="w-full col-span-5 h-full">
-                <div style={{backgroundImage: `url(${ mockImages[pictureIndex]? mockImages[pictureIndex]!.url : (mockPreview[pictureIndex] ? mockPreview[pictureIndex]!.url : "")})`, backgroundColor: "#748DA6"}}
+                <div style={{backgroundImage: `url(${ mockImages[pictureIndex]? mockImages[pictureIndex]!.url : (mockPreview[pictureIndex] ? mockPreview[pictureIndex]!.url : (product?.images ? product!.images[0].preview.url : ""))})`, backgroundColor: "#748DA6"}}
                   className="w-full h-full bg-cover bg-center transition duration-700 ease-in-out group-hover:opacity-60"
                 />
               </div>

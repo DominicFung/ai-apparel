@@ -7,14 +7,14 @@ export interface _Product {
   type: 'shirt' | 'tote' | 'hoodie',
   title: string
   description: string
-  images: ProductImageRaw[],
+  images: _ProductImage[],
   markup?: number
 }
 
 interface _ProductImage {
   id: string
-  full: ProductImageDetailsRaw
-  preview: ProductImageDetailsRaw
+  full?: _ProductImageDetails // never used
+  preview: _ProductImageDetails
 }
 
 interface _ProductImageDetails {
@@ -31,7 +31,7 @@ interface Product  extends _Product {
 }
 
 interface ProductImage extends _ProductImage {
-  full: ProductImageDetails
+  full?: ProductImageDetails
   preview: ProductImageDetails
 }
 
