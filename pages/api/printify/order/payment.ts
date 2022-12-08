@@ -28,6 +28,13 @@ const env = {
   "production": Environment.Production
 }
 
+interface BigInt {
+  toJSON: () => string;
+}
+BigInt.prototype["toJSON"] = function () {
+  return this.toString()
+}
+
 const { paymentsApi } = new Client({
   accessToken: secret.square[SQUARE_ENV].token,
   environment: env[SQUARE_ENV]
@@ -89,7 +96,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
     const orderId = uuidv4()
 
     let p = {
-      external_id: orderId,
+      external_id: `${process.env.NODE_ENV}_${orderId}`,
       line_items: [],
       shipping_method: 1,
       send_shipping_notification: true,
@@ -126,7 +133,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
       headers: {"Authorization": `Bearer ${secret.printify.token}`},
       body: JSON.stringify(p)
     }).json() as PrintifyOrderResponse
-    console.log(response)
 
     const amount = await convertToCAD(price, orderItems[0].varients[0].currency)
 
@@ -139,7 +145,14 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
       }
     } as CreatePaymentRequest
     const { result } = await paymentsApi.createPayment(s)
-    console.log(result)
+
+    console.log("=== HERE ===")
+    console.log(JSON.stringify({
+      orderId, customerId: b.customerId,
+      orderItemIds: b.orders,
+      printify: { request: p, response: response },
+      square: { request: s, response: result }
+    }, null, 2))
 
     let command = new PutItemCommand({
       TableName: cdk["AIApparel-DynamoStack"].AIApparelorderTableName,
@@ -148,11 +161,11 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
         orderItemIds: b.orders,
         printify: { request: p, response: response },
         square: { request: s, response: result }
-      } as Order)
+      } as Order, { removeUndefinedValues: true }),
+      
     })
-    const r = await client.send(command)
-    console.log(r)
-    
+    await client.send(command)
+
     res.json({
       orderId, printifyId: response.id, squareId: result.payment?.id
     } as PaymentResponse)

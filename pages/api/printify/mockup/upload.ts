@@ -1,7 +1,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { fromIni } from '@aws-sdk/credential-provider-ini'
-import { S3Client, S3ClientConfig, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, S3ClientConfig, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 
 import fs from 'fs'
 
@@ -58,6 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
   const s3 = new S3Client(s3Config)
   const key = `public/stablediffusion/${b.itemId}/original.jpg`
+  const darkText = `public/sharp/${b.itemId}/text/dark.png`
+  const lightText = `public/sharp/${b.itemId}/text/light.png`
   
   const command = new GetObjectCommand({
     Bucket: cdk["AIApparel-S3Stack"].bucketName,
@@ -65,7 +67,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   })
   let response = await s3.send(command)
   if (response.Body) {
-
     const command1 = new GetObjectCommand({
       Bucket: cdk["AIApparel-S3Stack"].bucketName,
       Key: `settings/cookies.json`
@@ -75,14 +76,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     let cookies = JSON.parse(cookieRaw) as CookieShape[]
 
     let promises = [] as Promise<PrintifyImageUploadResponse>[]
-    //let p = [] as PrintifyImageUploadResponse[]
+    let putPromises = []
     let track = [] as MockImage[]
 
     promises.push( uploadToPrintifyImages(response.Body as ReadableStream<any>, cookies))
     track.push({
       image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
       position: 'front',
-      color: 'na'
+      color: 'na',
+      url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${key}`
     } as MockImage)
 
     const darkFileName = process.env.NODE_ENV === "production" ? `/tmp/darktemp.png` : path.join(process.cwd(), 'tmp', "darktemp.png")
@@ -96,9 +98,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     await sharp({
       text: {
-        width: 1000,
-        height: 500,
-        text: `<i>"${sr.input.prompt}"</i>`,
+        width: 3000,
+        dpi: 150, 
+        text: `<i>${sr.input.prompt}</i>`,
         font: 'Quicksand',
         fontfile: path.join(process.cwd(), 'fonts', 'Quicksand-VariableFont_wght.ttf'),
         align: 'center',
@@ -109,9 +111,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     await sharp({
       text: {
-        width: 1000,
-        height: 500,
-        text: `<span foreground="white" style="italic">"${sr.input.prompt}"</span>`,
+        width: 3000,
+        dpi: 150, 
+        text: `<span foreground="white" style="italic">${sr.input.prompt}</span>`,
         font: 'Quicksand',
         fontfile: path.join(process.cwd(), 'fonts', 'Quicksand-VariableFont_wght.ttf'),
         align: 'center',
@@ -122,24 +124,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const stream1 = fs.createReadStream(darkFileName)
     const stream2 = fs.createReadStream(lightFileName)
+    const stream3 = fs.createReadStream(darkFileName)
+    const stream4 = fs.createReadStream(lightFileName)
+
+    putPromises.push(
+      s3.send(new PutObjectCommand({
+        Bucket: cdk["AIApparel-S3Stack"].bucketName,
+        Key: darkText,
+        Body: stream3
+      }))
+    )
+
+    putPromises.push(
+      s3.send(new PutObjectCommand({
+        Bucket: cdk["AIApparel-S3Stack"].bucketName,
+        Key: lightText,
+        Body: stream4
+      }))
+    )
     
     promises.push( uploadToPrintifyImages(stream1, cookies) )
     track.push({
       image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
       position: 'back',
-      color: 'black'
+      color: 'black',
+      url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${darkText}`
     } as MockImage)
 
     promises.push( uploadToPrintifyImages(stream2, cookies) )
     track.push({
       image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
       position: 'back',
-      color: 'white'
+      color: 'white',
+      url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${lightText}`
     } as MockImage)
 
     // let logo = fs.createReadStream(join(__dirname, '../../../', './assets/Logo-Light.png'))
     // backPromises.push(uploadToPrintifyImages(logo, cookies))
     
+    await Promise.all(putPromises)
     const p = await Promise.all(promises)
 
     let r = { images: [] } as MockUploadToPrintifyResponse

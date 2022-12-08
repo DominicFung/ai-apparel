@@ -17,10 +17,15 @@ import { OrderItem } from '../types/order'
 import { CountryCode } from '../types/global'
 import { AIImageResponse } from '../types/replicate'
 import { PaymentRequest, PaymentResponse } from '../types/square'
+import { CustomerResponse } from '../types/customer'
 
 interface PaymentProps {
+  customer: CustomerResponse | undefined
   orderItem: OrderItem | undefined
+  serviceId: string | undefined
   fullImageServiceId: string | undefined
+
+  setPaymentResponse: (p: PaymentResponse) => void
 }
 
 interface Region {
@@ -52,7 +57,9 @@ export default function Payment(props: PaymentProps){
 
   const [ price, setPrice ] = useState(0)
   const [ disable,  isDisabled ] = useState(true)
+
   const [ image, setImage ] = useState<AIImageResponse>()
+  const [ backImage, setBackImage ] = useState<AIImageResponse>()
 
   const checkFormFilled = () => {
     console.log(image)
@@ -67,11 +74,10 @@ export default function Payment(props: PaymentProps){
   }
 
   const reloadImage = async (serviceId: string) => {
-    console.log("Reloading HD Image in Payment ... ")
-    let url = `/api/userid/replicate/rudalle-sr/${serviceId}`
+    let url = `/api/replicate/rudalle-sr/${serviceId}`
     let response = await (await fetch(url)).json() as AIImageResponse
     if (response.status === 'PROCESSING') { 
-      setTimeout( reloadImage, 1600+(Math.random()*500), serviceId )
+      setTimeout( reloadImage, 3600+(Math.random()*2000), serviceId )
     } else if (response.status === 'ERROR') {
       console.error(`RUDallE-SR encountered an error, Replicate.io service ID: ${response.id}`)
     } else {
@@ -80,16 +86,29 @@ export default function Payment(props: PaymentProps){
     }
   }
 
+  const reloadTextImage = async (serviceId: string) => {
+    let url = `/api/sharp/text/${serviceId}`
+    let response = await (await fetch(url)).json() as AIImageResponse
+    if (response.status === 'PROCESSING') { 
+      setTimeout( reloadTextImage, 4600+(Math.random()*2000), serviceId )
+    } else {
+      console.log("Back Image set!")
+      setBackImage(response)
+    }
+  }
+
   const validForm = (): boolean => {
     return true
   }
 
   useEffect(() => {
-    if (props.orderItem && props.fullImageServiceId) {
-      setPrice(calculatePrice([props.orderItem]))
+    if (props.orderItem && props.fullImageServiceId && props.serviceId && props.customer) {
+      setPrice(calculatePrice([props.orderItem]) * props.customer.exchangeRate)
       reloadImage(props.fullImageServiceId)
+      reloadTextImage(props.serviceId)
+      
     }
-  }, [props.orderItem, props.fullImageServiceId])
+  }, [props.orderItem, props.fullImageServiceId, props.serviceId, props.customer])
 
   useEffect(() => {
     checkFormFilled()
@@ -108,7 +127,7 @@ export default function Payment(props: PaymentProps){
   ) => {
     if (validForm() && props.orderItem) {
       console.log(JSON.stringify(props.orderItem.orderItemId, null, 2))
-      const response = await (await fetch(`/api/userId/printify/order/payment`, {
+      const response = await (await fetch(`/api/printify/order/payment`, {
         method: 'POST',
         body: JSON.stringify({
           sourceId: token,
@@ -121,13 +140,16 @@ export default function Payment(props: PaymentProps){
         } as PaymentRequest)
       })).json() as PaymentResponse
       console.log(response)
-      alert(JSON.stringify(response, null, 2))
+      //alert(JSON.stringify(response, null, 2))
+
+      props.setPaymentResponse(response)
     }
   }
 
   return (<>
     <div className='mb-8'>
-      <h2>${(price/100).toFixed(2)} {props.orderItem?.varients[0].currency}</h2>
+      <h2>${(price/100).toFixed(2)} {props.customer?.currency}</h2>
+      <p><small className="text-xs text-gray-600" style={{fontSize: 10}}> FREE Shipping!</small></p>
      { props.orderItem && <small className="italic text-xs text-gray-500" style={{fontSize: 10}}>Order Id: {props.orderItem.orderItemId}</small>}
     </div>
     <form className='mb-8'>
@@ -231,7 +253,7 @@ export default function Payment(props: PaymentProps){
       
     >
       <CreditCard buttonProps={{
-        isLoading: disable || image === undefined
+        isLoading: disable || image === undefined || backImage === undefined
       }} />
     </PaymentForm>
   </>)

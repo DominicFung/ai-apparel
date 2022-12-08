@@ -21,17 +21,22 @@ import { AIImageResponse, SuperResolutionRequest, SuperResolutionResponse } from
 import { Product } from '../../../../types/product'
 import { LocationBasedVariant, MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyMockRequest, PrintifyMockResponse, Variant, VariantRequest, VariantResponse } from '../../../../types/printify'
 import { LineItem, OrderItem, OrderItemRequest } from '../../../../types/order'
+import { isBright } from '../../../../utils/utils'
+import ThankYouPopup from '../../../../components/popup/thankyou'
+import { PaymentResponse } from '../../../../types/square'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
 
+interface IVariant {
+  variantId: number,
+  color: { name: string, hex: string, price: number | null } 
+}
+
 interface Sizes {
   [size: string]: {
     disabled: boolean
-    variant: {
-      variantId: number,
-      color: { name: string, hex: string, price: number | null } 
-    }[]
+    variant: IVariant[]
   }
 }
 const _ENV = 'Dev' as 'Dev' | 'Production'
@@ -73,6 +78,9 @@ const Item: NextPageWithLayout = (props) => {
   const [ paymentDrawerOpen, setPaymentDrawerOpen ] = useState(false)
   const [ orderItem, setOrderItem ] = useState<OrderItem>()
   const [ fullImageServiceId, setFullImageServiceId ] = useState<string>()
+
+  const [ paymentResponse, setPaymentResponse ] = useState<PaymentResponse>()
+  const [ thankyouOpen, setThankyouOpen ] = useState(false)
 
   /** AI Image */
   const getImage = async (serviceId: string) => {
@@ -259,22 +267,41 @@ const Item: NextPageWithLayout = (props) => {
   const buyNow = async () => {
     let fullImageService = (await generateHQImage())
     setFullImageServiceId(fullImageService.id)
-
+    
     let dynamicProgramming = {} as { [key: string]: LineItem }
     for (let i=0; i<quantity; i++) {
       const s = sizeChoices[i]
-      const c = sizes[s][colorChoices[i]].color.hex
-      const vid= sizes[s][colorChoices[i]].variantId
+      console.log(sizes[s])
+      const c =   (sizes[s].variant[colorChoices[i]] as IVariant).color.hex
+      const vid = (sizes[s].variant[colorChoices[i]] as IVariant).variantId
+
+      let printAreas = { 
+        front: fullImageService.s3ImageUrl 
+      } as { front?: string, back?: string }
 
       let key = `${s}::::${c}`
       if (dynamicProgramming[key]) {
         dynamicProgramming[key].quantity += 1
       } else {
+        if (printifyUpload) {
+          const shirtIsBright = isBright(c)
+    
+          for (let p of printifyUpload.images) {
+            if (p.position === "back" && p.color === "black" && shirtIsBright) {
+              printAreas.back = p.url; break
+            } else if (p.position === "back" && p.color === "white" && !shirtIsBright) {
+              printAreas.back = p.url; break
+            }
+          }
+        }
+
         dynamicProgramming[key] = {
           variantId: vid,
-          printAreas: { front: fullImageService.s3ImageUrl },
+          printAreas,
           quantity: 1
         } as LineItem
+
+        console.log(dynamicProgramming[key])
       }
     }
 
@@ -355,7 +382,9 @@ const Item: NextPageWithLayout = (props) => {
   }, [product, providerVariant, mockPreview, pictureIndex, tab, sizeChoices, colorChoices, sizes, printifyUpload])
 
   useEffect(() => {
-    if (sizeChoices.length > 0 && colorChoices.length > 0 && props.customer) {
+    if (sizeChoices.length > 0 && colorChoices.length > 0 && props.customer && product) {
+      console.log(product)
+      console.log(props.customer.exchangeRate)
       let price = 0
       for (let i in sizeChoices) {
         const s = sizes[sizeChoices[i]]
@@ -365,7 +394,14 @@ const Item: NextPageWithLayout = (props) => {
       setPrice(price)
       setCurrency(props.customer.currency)
     }
-  }, [sizeChoices, colorChoices, quantity, props.customer])
+  }, [sizeChoices, colorChoices, quantity, props.customer, product])
+
+  useEffect(() => {
+    if (paymentResponse) { 
+      setPaymentDrawerOpen(false)
+      setThankyouOpen(true)
+    }
+  }, [paymentResponse])
 
   return (<>
     <Head>
@@ -387,8 +423,9 @@ const Item: NextPageWithLayout = (props) => {
         content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
       />
     </Head>
+    <ThankYouPopup open={thankyouOpen} setOpen={setThankyouOpen} paymentResponse={paymentResponse} />
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
-      <Payment orderItem={orderItem} fullImageServiceId={fullImageServiceId}/>
+      <Payment customer={props.customer} orderItem={orderItem} fullImageServiceId={fullImageServiceId} serviceId={itemId as string} setPaymentResponse={setPaymentResponse} />
     </Drawer>
     <div className={`${styles.mainBackground} w-full p-4 pt-10 lg:pt-32  flex justify-center pb-24`}>
       <div className="container mx-w-2xl">

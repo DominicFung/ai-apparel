@@ -139,7 +139,8 @@ interface PrintifyOrderRequest {
     "blueprint_id": number,
     "variant_id": number,
     "print_areas": {
-      "front": string
+      "front"?: string
+      "back"?: string
     },
     "quantity": number
   }[],
@@ -168,6 +169,7 @@ interface MockImage {
   image: PrintifyImagePreviewImage
   position: 'front' | 'back',
   color: 'black' | 'white' | 'na'
+  url: string
 }
 
 interface PrintifyMockRequest {

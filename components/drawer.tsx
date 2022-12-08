@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { ChevronLeftIcon } from '@heroicons/react/24/solid'
 
 interface DrawerProps {
   children: ReactNode,
@@ -23,7 +24,12 @@ export default function Drawer(props: DrawerProps){
       }
     >
       <article className="relative w-screen max-w-lg pb-10 flex flex-col space-y-6 overflow-y-scroll h-full">
-        <header className="p-4 font-bold text-lg">{props.header}</header>
+        <header className="p-4 font-bold text-lg flex flex-row">
+          <button className="bg-gray-100 rounded-sm px-3" onClick={() => { props.setIsOpen(false) }}>
+            <ChevronLeftIcon className='w-5 h-5 text-gray-500'/>
+          </button>
+          <p className="pl-3">{props.header}</p>
+        </header>
         <div className="px-4 py-1">
           {props.children}
         </div>

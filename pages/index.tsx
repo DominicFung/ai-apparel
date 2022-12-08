@@ -81,7 +81,7 @@ const Home: NextPageWithLayout = (props) => {
       newImgs.push(response)
       if (response.status !== 'COMPLETE') { 
         loading = true
-        setTimeout( reloadImages, 1600+(Math.random()*500), newImgs )
+        setTimeout( reloadImages, 3600+(Math.random()*2000), newImgs )
       }
     }
 
@@ -101,7 +101,7 @@ const Home: NextPageWithLayout = (props) => {
         temp.push({id: generateResult[i].id, status: 'PROCESSING'} as AIImageResponse)
       }
 
-      setTimeout( reloadImages, 2600+(Math.random()*500), temp)
+      setTimeout( reloadImages, 4600+(Math.random()*2000), temp)
       setImages([...temp])
       scroller.scrollTo("aiimages", {
         duration: 1500,

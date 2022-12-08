@@ -7,15 +7,7 @@ import cdk from '../../../../cdk-outputs.json'
 import config from "../../../../src/aws-exports"
 
 import { PrintifyImagePreview, PrintifyImagePreviewImage, PrintifyMockRequest, PrintifyMockResponse } from '../../../../types/printify'
-
-const isBright = (color: string): boolean => {
-  const hex = color.replace('#', '');
-  const c_r = parseInt(hex.substring(0, 0 + 2), 16);
-  const c_g = parseInt(hex.substring(2, 2 + 2), 16);
-  const c_b = parseInt(hex.substring(4, 4 + 2), 16);
-  const brightness = ((c_r * 299) + (c_g * 587) + (c_b * 114)) / 1000;
-  return brightness > 155;
-}
+import { isBright } from '../../../../utils/utils'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<PrintifyMockResponse>) {
   const { itemId } = req.query

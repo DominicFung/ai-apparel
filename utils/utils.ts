@@ -1,6 +1,7 @@
 import { OrderItem } from "../types/order";
 import { LocationBasedVariant } from "../types/printify";
 
+export const BASEMARKUP = 1.9
 
 export const validateEmail = (email: string) => {
   const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -16,14 +17,14 @@ export const setIntersepter = (b: boolean) => {
 }
 
 type SquareEnv = "sandbox" | "production"
-export const SQUARE_ENV: SquareEnv = "sandbox"
+export const SQUARE_ENV: SquareEnv = process.env.NODE_ENV === "production" ? "production" : "sandbox"
 
-export const markup = (u: LocationBasedVariant): LocationBasedVariant => {
+export const markup = (u: LocationBasedVariant, markup?: number): LocationBasedVariant => {
   //let price = u.price * 1.5
   //console.log(`Old Price: $${u.price/100}, New Price: ${price/100}`)
-  u.price = u.price * 1.5
+  u.price = u.price * (markup || BASEMARKUP )
   u.firstCost = u.firstCost * 1
-  u.additionalCost = u.additionalCost * 1.1
+  u.additionalCost = u.additionalCost * 1
   return u
 }
 
@@ -36,12 +37,17 @@ export const calculatePrice = (ois: OrderItem[]): number => {
       for (let l of lookup) {
         if (l.id === c.variantId) {
           price += l.price
-          if (usedProvider.includes(oi.printProviderId)) {
-            price += (l.additionalCost) * c.quantity
-          } else {
-            price += l.firstCost
-            price += (l.additionalCost * (c.quantity - 1))
-          }
+          
+
+          // FREE SHIPPING FOR NOW!!!
+
+
+          // if (usedProvider.includes(oi.printProviderId)) {
+          //   price += (l.additionalCost) * c.quantity
+          // } else {
+          //   price += l.firstCost
+          //   price += (l.additionalCost * (c.quantity - 1))
+          // }
           break
         }
       }
@@ -84,3 +90,11 @@ export interface Conversion {
   }
 }
 
+export const isBright = (color: string): boolean => {
+  const hex = color.replace('#', '');
+  const c_r = parseInt(hex.substring(0, 0 + 2), 16);
+  const c_g = parseInt(hex.substring(2, 2 + 2), 16);
+  const c_b = parseInt(hex.substring(4, 4 + 2), 16);
+  const brightness = ((c_r * 299) + (c_g * 587) + (c_b * 114)) / 1000;
+  return brightness > 155;
+}

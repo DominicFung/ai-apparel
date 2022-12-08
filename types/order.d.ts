@@ -8,7 +8,8 @@ export interface OrderItem extends OrderItemRequest {
 export interface LineItem {
     variantId: number,
     printAreas: {
-      front: string
+      front?: string,
+      back?: string
     },
     quantity: number
 }
