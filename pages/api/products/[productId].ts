@@ -7,13 +7,11 @@ import  { unmarshall } from "@aws-sdk/util-dynamodb"
 import got from 'got'
 
 import cdk from '../../../cdk-outputs.json'
-import secret from '../../../secret.json'
 import config from "../../../src/aws-exports"
 
 import { Amplify } from "aws-amplify"
 Amplify.configure({...config, ssr: true })
 
-import { ReplicateRUDalleSRResponse } from '../../../types/replicate'
 import { Product, _Product } from '../../../types/product'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<Product>) {

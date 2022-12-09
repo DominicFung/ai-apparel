@@ -1,23 +1,24 @@
 
 import { useEffect, useState } from 'react'
 import { CreditCard, PaymentForm } from 'react-square-web-payments-sdk'
+import { TokenResult, VerifyBuyerResponseDetails } from '@square/web-sdk'
 
 import { 
   EnvelopeIcon, PhoneIcon, HomeIcon, BuildingOffice2Icon
 } from '@heroicons/react/24/solid'
 
 import { calculatePrice, SQUARE_ENV as ENV } from '../utils/utils'
-import { TokenResult, VerifyBuyerResponseDetails } from '@square/web-sdk'
 
-import countries from '../countries.json'
-import secret from '../secret.json'
-
-import regionList from '../country-region.json'
 import { OrderItem } from '../types/order'
 import { CountryCode } from '../types/global'
 import { AIImageResponse } from '../types/replicate'
 import { PaymentRequest, PaymentResponse } from '../types/square'
 import { CustomerResponse } from '../types/customer'
+
+import countries from '../countries.json'
+import secret from '../secret.json'
+import regionList from '../country-region.json'
+
 
 interface PaymentProps {
   customer: CustomerResponse | undefined

@@ -6,10 +6,8 @@ import { DynamoDBClient, ScanCommand, DynamoDBClientConfig } from '@aws-sdk/clie
 import got from 'got'
 
 import cdk from '../../../cdk-outputs.json'
-import secret from '../../../secret.json'
 
 import { unmarshall } from '@aws-sdk/util-dynamodb'
-import { ReplicateRUDalleSRResponse } from '../../../types/replicate'
 import { Product, _Product } from '../../../types/product'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<Product[]>) {
@@ -47,34 +45,8 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
     for (let p of r) {
       let product = { ...p, images: []} as Product
       for (let i of p.images) {
-        const fullKey = `products/printify/${p.productId}/${i.id}/full.jpg`
-        const previewKey = `products/printify/${p.productId}/${i.id}/preview.jpg`
-
-        try {
-          const command0 = new HeadObjectCommand({
-            Bucket: cdk["AIApparel-S3Stack"].bucketName,
-            Key: fullKey,
-          })
-          await s3.send(command0)
-        } catch {
-          console.log(`Full Image not yet saved "${fullKey}". Saving ..`)
-          let img = await got.get(i.full.externalUrl, {
-            headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
-          }).json() as ReplicateRUDalleSRResponse
-  
-          if (img.output) {
-            let rawImg = await got.get(img.output, {
-              headers: {'Authorization': `TOKEN ${secret.replicate.token}`},
-            })
-  
-            const command1 = new PutObjectCommand({
-              Bucket: cdk["AIApparel-S3Stack"].bucketName,
-              Key: fullKey,
-              Body: rawImg.rawBody
-            })
-            await s3.send(command1)
-          }
-        } 
+        //const fullKey = `products/printify/${p.productId}/${i.id}/full.jpg`
+        const previewKey = `products/printify/${p.productId}/${i.id}/preview.jpg` 
         
         try {
           const command0 = new HeadObjectCommand({
@@ -95,7 +67,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
   
         product.images.push({
           id: i.id,
-          full: {...i.full, url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${fullKey}`},
           preview: { ...i.preview, url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${previewKey}` }
         })
       }

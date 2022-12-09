@@ -62,7 +62,7 @@ export default function ThankYouPopup(props: ThankYouPopupProps){
 
 
 
-                    <p>If you don't get it within 24hrs, please contact <a href="mailto:dominic.fung@icloud.com">Dom</a></p>
+                    <p>If you don&apos;t get it within 24hrs, please contact <a href="mailto:dominic.fung@icloud.com">Dom</a></p>
 
                   </div>
                 </div>
