@@ -8,13 +8,15 @@ import fs from 'fs'
 import cdk from '../../../../cdk-outputs.json'
 
 import { CookieShape, PrintifyImageUploadResponse, uploadToPrintifyImages } from '../../../../utils/printify'
-import { MockImage, MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyImagePreviewImage } from '../../../../types/printify'
+import { MockImage, MockUploadToPrintifyRequest, MockUploadToPrintifyResponse } from '../../../../types/printify'
 import sharp from 'sharp'
 
 import path from 'path';
-import { DynamoDBClient, DynamoDBClientConfig, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, DynamoDBClientConfig, GetItemCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { AIService } from '../../../../types/replicate'
+
+import { PRINTIFY_IMAGE_ANGLE, PRINTIFY_IMAGE_SCALE, PRINTIFY_IMAGE_X, PRINTIFY_IMAGE_Y } from '../../../../types/constants'
 
 path.resolve(process.cwd(), 'fonts', 'fonts.conf');
 path.resolve(process.cwd(), 'fonts', 'Quicksand-VariableFont_wght.ttf');
@@ -81,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     promises.push( uploadToPrintifyImages(response.Body as ReadableStream<any>, cookies))
     track.push({
-      image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
+      image: { id: "", scale: PRINTIFY_IMAGE_SCALE, x: PRINTIFY_IMAGE_X, y: PRINTIFY_IMAGE_Y, angle: PRINTIFY_IMAGE_ANGLE, type: "image/png" },
       position: 'front',
       color: 'na',
       url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${key}`
@@ -99,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     await sharp({
       text: {
         width: 3000,
-        dpi: 150, 
+        dpi: 1000, 
         text: `<i>${sr.input.prompt}</i>`,
         font: 'Quicksand',
         fontfile: path.join(process.cwd(), 'fonts', 'Quicksand-VariableFont_wght.ttf'),
@@ -112,7 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     await sharp({
       text: {
         width: 3000,
-        dpi: 150, 
+        dpi: 1000, 
         text: `<span foreground="white" style="italic">${sr.input.prompt}</span>`,
         font: 'Quicksand',
         fontfile: path.join(process.cwd(), 'fonts', 'Quicksand-VariableFont_wght.ttf'),
@@ -145,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     
     promises.push( uploadToPrintifyImages(stream1, cookies) )
     track.push({
-      image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
+      image: { id: "", scale: PRINTIFY_IMAGE_SCALE, x: PRINTIFY_IMAGE_X, y: PRINTIFY_IMAGE_Y, angle: 0, type: "image/png" },
       position: 'back',
       color: 'black',
       url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${darkText}`
@@ -153,7 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     promises.push( uploadToPrintifyImages(stream2, cookies) )
     track.push({
-      image: { id: "", scale: 0.666666, x: 0.5, y: 0.5, angle: 0, type: "image/png" },
+      image: { id: "", scale: PRINTIFY_IMAGE_SCALE, x: PRINTIFY_IMAGE_X, y: PRINTIFY_IMAGE_Y, angle: 0, type: "image/png" },
       position: 'back',
       color: 'white',
       url: `https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${lightText}`

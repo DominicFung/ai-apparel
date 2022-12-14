@@ -3,13 +3,14 @@ import { LocationBasedVariant } from './printify'
 export interface OrderItem extends OrderItemRequest {
   orderItemId: string,
   customerId: string,
+  environment: "development" | "production" | "test"
 }
 
 export interface LineItem {
     variantId: number,
     printAreas: {
-      front?: string,
-      back?: string
+      front?: string | { src: string, scale: number, x: number, y: number, angle: number }[]
+      back?: string | { src: string, scale: number, x: number, y: number, angle: number }[]
     },
     quantity: number
 }

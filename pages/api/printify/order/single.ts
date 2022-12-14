@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<O
     let order = {
       orderItemId: uuidv4(),
       customerId: c.customerId,
+      environment: process.env.NODE_ENV,
       ...b
     } as OrderItem
     

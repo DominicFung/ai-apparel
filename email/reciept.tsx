@@ -262,7 +262,7 @@ export const generateEmail = async (
                 View this email in your browser
               </MjmlText>
               <MjmlText color="#445566" font-size="11px" align="center" line-height="16px">
-                You are receiving this email receipt because you've ordered an apparel from AI Apparel Store. If this is not something you've done, email us back at
+                You are receiving this email receipt because you've ordered an apparel from AI Apparel Store. If this is not something you've done, email us back at 
                 <a href="mailto:dominic.fung@icloud.com">dominic.fung@icloud.com</a>
               </MjmlText>
               <MjmlText color="#445566" font-size="11px" align="center" line-height="16px">

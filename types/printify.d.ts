@@ -139,8 +139,8 @@ interface PrintifyOrderRequest {
     "blueprint_id": number,
     "variant_id": number,
     "print_areas": {
-      "front"?: string
-      "back"?: string
+      "front"?: string | { src: string, scale: number, x: number, y: number, angle: number }[]
+      "back"?: string | { src: string, scale: number, x: number, y: number, angle: number }[]
     },
     "quantity": number
   }[],

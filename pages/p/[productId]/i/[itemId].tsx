@@ -62,6 +62,7 @@ const Item: NextPageWithLayout = (props) => {
   
   //** Belongs to storeItem */
   const [ price, setPrice ] = useState(0)
+  const [ totalPrice, setTotalPrice ] = useState(0)
   const [ currency, setCurrency ] = useState('USD')
   const [ sizes, setSizes ] = useState<Sizes>({}) // Key to menu, if size change, colors change
 
@@ -211,21 +212,29 @@ const Item: NextPageWithLayout = (props) => {
   const incrementQuantity = () => {
     console.log("increment quantity")
     let i = parseInt(quantityText)
-    if (i >= 1) { setQuantityText(""+(i+1)) }
+    if (i >= 1 && i<=7) { 
+      setQuantityText(""+(i+1))
+      colorChoices.push(0)
+      sizeChoices.push(Object.keys(sizes)[0])
+      customInstructions.push("")
+
+      setQuantity(i+1)
+      setColorChoices(colorChoices)
+      setSizeChoices(sizeChoices)
+      setCustomInstructions(customInstructions)
+      setTab(i)
+    }
     else { console.warn(`quanity is NAN: ${i}`) }
   }
 
   const decrementQuantity = () => {
     console.log("decrement quantity")
-    let i = parseInt(quantityText)
-    if (i > 1) { setQuantityText(""+(i-1)) }
-    else { console.warn(`quanity is NAN: ${i}`) }
-  }
-
-  useEffect(() => {
-    let i = parseInt(quantityText)
-    if (i) { 
-      setQuantity(i) 
+    let j = parseInt(quantityText)
+    if (j > 1) { 
+      const i = j-1
+      setQuantityText(""+(i)) 
+      
+      setQuantity(i)
       if (tab >= i) { setTab(i-1) }
 
       let oldLen = colorChoices.length
@@ -248,8 +257,38 @@ const Item: NextPageWithLayout = (props) => {
       setSizeChoices(sizeChoices)
       setCustomInstructions(customInstructions)
 
-    } else { console.warn(`quanity is NAN: ${i}`) }
-  }, [quantityText, colorChoices, customInstructions, sizeChoices, sizes, tab])
+    }
+    else { console.warn(`quanity is NAN: ${j}`) }
+  }
+
+  // useEffect(() => {
+  //   let i = parseInt(quantityText)
+  //   if (i) { 
+  //     setQuantity(i)
+  //     if (tab >= i) { setTab(i-1) }
+
+  //     let oldLen = colorChoices.length
+  //     let dif = i - oldLen
+
+  //     if (dif > 0)
+  //       for (let a=0; a<dif; a++) {
+  //         colorChoices.push(0)
+  //         sizeChoices.push(Object.keys(sizes)[0])
+  //         customInstructions.push("")
+  //       }
+  //     else if (dif < 0)
+  //       for (let a=0; a>dif; a--) {
+  //         colorChoices.pop()
+  //         customInstructions.pop()
+  //       }
+  //     else console.log("No change in i value. OK")
+
+  //     setColorChoices(colorChoices)
+  //     setSizeChoices(sizeChoices)
+  //     setCustomInstructions(customInstructions)
+
+  //   } else { console.warn(`quanity is NAN: ${i}`) }
+  // }, [quantityText, colorChoices, customInstructions, sizeChoices, sizes, tab])
 
   const generateHQImage = async () => {
     let url = `/api/replicate/rudalle-sr/generate`
@@ -383,7 +422,8 @@ const Item: NextPageWithLayout = (props) => {
   }, [product, providerVariant, mockPreview, pictureIndex, tab, sizeChoices, colorChoices, sizes, printifyUpload])
 
   useEffect(() => {
-    if (sizeChoices.length > 0 && colorChoices.length > 0 && props.customer && product) {
+    // SETTING TOTAL PRICE
+    if (sizeChoices.length > 0 && colorChoices.length > 0 && colorChoices.length === sizeChoices.length && props.customer && product) {
       console.log(product)
       console.log(props.customer.exchangeRate)
       let price = 0
@@ -392,10 +432,18 @@ const Item: NextPageWithLayout = (props) => {
         console.log(s)
         price += s.variant[colorChoices[i]].color.price! * props.customer.exchangeRate
       }
-      setPrice(price)
-      setCurrency(props.customer.currency)
+      setTotalPrice(price)
     }
-  }, [sizeChoices, colorChoices, quantity, props.customer, product])
+
+    if (sizeChoices.length > 0 && colorChoices.length > 0 && colorChoices.length === sizeChoices.length && props.customer && product && tab < colorChoices.length) {
+      console.log(product)
+      console.log(props.customer.exchangeRate)
+      const s = sizes[sizeChoices[tab]]
+      setPrice(s.variant[colorChoices[tab]].color.price! * props.customer.exchangeRate)
+    }
+
+    if (props.customer) setCurrency(props.customer.currency)
+  }, [sizeChoices, colorChoices, quantity, props.customer, product, tab])
 
   useEffect(() => {
     if (paymentResponse) { 
@@ -487,7 +535,8 @@ const Item: NextPageWithLayout = (props) => {
               <small className="italic text-xs text-gray-300" style={{fontSize: 10}}>Product id: {productId}</small>
 
               <div className={`${styles.dollarAmount} py-4`}>
-                <b>${(price/100).toFixed(2)}</b> {currency}
+                <b>${(price/100).toFixed(2)}</b> {currency} &nbsp; 
+                { quantity > 1 && <small className='text-xs italic text-gray-200'> total: ${(totalPrice/100).toFixed(2)}</small> }
               </div>
 
               <p className={`${styles.description} m-2 p-4 rounded`}>{product?.description}</p>
@@ -545,7 +594,7 @@ const Item: NextPageWithLayout = (props) => {
                         return (
                           <button key={i} className={`${styles.addtocartButton} rounded p-1 px-2 mr-1 inline-flex items-center justify-center bg-gray-300 hover:cursor-pointer border-2 my-1 hover:border-white`}
                             style={{borderColor: sizeChoices[tab] === v ? "white" : "", color: sizeChoices[tab] === v ? "white" : "" }}
-                            disabled={sizes[sizeChoices[tab]].disabled}
+                            disabled={sizes[sizeChoices[tab]]?.disabled}
                             onClick={() => { 
                               sizeChoices[tab] = v
                               setSizeChoices([...sizeChoices])

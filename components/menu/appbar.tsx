@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 
 import { ShoppingBagIcon } from '@heroicons/react/24/solid'

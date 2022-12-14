@@ -25,6 +25,8 @@ import { PrintifyOrderRequest, PrintifyOrderResponse } from '../../../../types/p
 import { Amplify } from "aws-amplify"
 import { generateEmail } from '../../../../email/reciept'
 import { Customer } from '../../../../types/customer'
+import { PRINTIFY_IMAGE_ANGLE, PRINTIFY_IMAGE_SCALE, PRINTIFY_IMAGE_X, PRINTIFY_IMAGE_Y } from '../../../../types/constants'
+
 Amplify.configure({...config, ssr: true })
 
 const env = {
@@ -133,6 +135,28 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
 
     for (let oi of orderItems) {
       for (let v of oi.choice) {
+        if (v.printAreas.front && typeof v.printAreas.front === "string") {
+          let temp = v.printAreas.front
+          v.printAreas.front = [{
+            src: temp,
+            scale: PRINTIFY_IMAGE_SCALE,
+            x: PRINTIFY_IMAGE_X,
+            y: PRINTIFY_IMAGE_Y,
+            angle: PRINTIFY_IMAGE_ANGLE
+          }]
+        }
+
+        if (v.printAreas.back && typeof v.printAreas.back === "string") {
+          let temp = v.printAreas.back
+          v.printAreas.back = [{
+            src: temp,
+            scale: PRINTIFY_IMAGE_SCALE,
+            x: PRINTIFY_IMAGE_X,
+            y: PRINTIFY_IMAGE_Y,
+            angle: PRINTIFY_IMAGE_ANGLE
+          }]
+        }
+
         p.line_items.push({
           "print_provider_id": Number(oi.printProviderId),
           "blueprint_id": Number(oi.productId),
@@ -190,7 +214,10 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
 
     await ses.send( new SendEmailCommand({
       Source: "no-reply@aiapparelstore.com",
-      Destination: { ToAddresses: [ "dominic.fung@icloud.com", "fung_dominic@hotmail.com" ] },
+      Destination: { 
+        ToAddresses: [ b.addressTo.email ],
+        BccAddresses: [ "dominic.fung@icloud.com", "fung_dominic@hotmail.com" ] 
+      },
       Message: {
         Subject: { Data: "Thank You!" },
         Body: {
