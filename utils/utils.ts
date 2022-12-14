@@ -34,12 +34,9 @@ export const calculatePrice = (ois: OrderItem[]): number => {
     for (let c of oi.choice) {
       for (let l of lookup) {
         if (l.id === c.variantId) {
-          price += l.price
+          price += l.price * c.quantity
           
-
           // FREE SHIPPING FOR NOW!!!
-
-
           // if (usedProvider.includes(oi.printProviderId)) {
           //   price += (l.additionalCost) * c.quantity
           // } else {

@@ -36,6 +36,10 @@ export class IamStack extends Stack {
         new PolicyStatement({
           resources: [ bucketArn, `${bucketArn}/*` ],
           actions: ["s3:*"]
+        }),
+        new PolicyStatement({
+          resources: ["*"],
+          actions: ["ses:SendEmail"]
         })
       ]
     }))

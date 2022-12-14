@@ -1,6 +1,9 @@
 
+import { TokenResult } from '@square/web-sdk'
+
 /** Defined by me. Payment */
 export interface PaymentRequest {
+  itemId: string
   customerId: string
   sourceId: TokenResult
   orders: [string]

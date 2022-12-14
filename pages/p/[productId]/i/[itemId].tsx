@@ -314,7 +314,8 @@ const Item: NextPageWithLayout = (props) => {
       productId: productId as string,
       printProviderId: providerVariant?.id.toString(),
       varients: providerVariant?.locationVariant,
-      choice: lineItems
+      choice: lineItems,
+      itemId: itemId
     } as OrderItemRequest
 
     let url = `/api/printify/order/single`

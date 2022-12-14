@@ -48,8 +48,8 @@ export default function ThankYouPopup(props: ThankYouPopupProps){
           leaveFrom="opacity-100 translate-y-0 sm:scale-100"
           leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
         >
-          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle">
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 m-5">
               <div className="sm:flex sm:items-start">
                 <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                   <Dialog.Title as="h3" className="text-lg leading-6 font-medium text-gray-600 mb-5">
@@ -60,7 +60,11 @@ export default function ThankYouPopup(props: ThankYouPopupProps){
                     <h3>Thank you for purchasing!</h3>
                     <p>You should get an email of your receipt shortly!</p>
 
-
+                    <p className="bg-gray-100 my-5 p-5 rounded-sm">
+                      <small style={{ color: "#637381", fontSize: "10px" }}> Order ID: {props.paymentResponse?.orderId}</small><br />
+                      <small style={{ color: "#637381", fontSize: "10px" }}> Square: {props.paymentResponse?.squareId}</small><br />
+                      <small style={{ color: "#637381", fontSize: "10px" }}> Printify: {props.paymentResponse?.printifyId}</small><br />
+                    </p>
 
                     <p>If you don&apos;t get it within 24hrs, please contact <a href="mailto:dominic.fung@icloud.com">Dom</a></p>
 

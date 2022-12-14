@@ -2,12 +2,14 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { fromIni } from '@aws-sdk/credential-provider-ini'
 import { S3Client, S3ClientConfig, GetObjectCommand } from '@aws-sdk/client-s3'
 import { DynamoDBClient, DynamoDBClientConfig, GetItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb'
+import { SESClientConfig, SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 
 import { Client, CreatePaymentRequest, Environment } from 'square'
 
 import { v4 as uuidv4 } from 'uuid'
 import { got } from 'got'
+import Iron from '@hapi/iron'
 
 import cdk from '../../../../cdk-outputs.json'
 import config from "../../../../src/aws-exports"
@@ -21,6 +23,8 @@ import { PaymentResponse, PaymentRequest } from '../../../../types/square'
 import { PrintifyOrderRequest, PrintifyOrderResponse } from '../../../../types/printify'
 
 import { Amplify } from "aws-amplify"
+import { generateEmail } from '../../../../email/reciept'
+import { Customer } from '../../../../types/customer'
 Amplify.configure({...config, ssr: true })
 
 const env = {
@@ -65,8 +69,10 @@ export const convertToCAD = async (price: number, currency: Currency): Promise<n
 }
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<PaymentResponse>) {
-  if (req.method === 'POST') {
+  const token = req.cookies.token
+  if (req.method === 'POST' && token) {
     let b = JSON.parse(req.body) as PaymentRequest
+    const customer = (await Iron.unseal(token, secret.seal, Iron.defaults)) as Customer
 
     let config = {} as DynamoDBClientConfig
     if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
@@ -78,6 +84,17 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
       config.region = 'us-east-1'
     }
     let client = new DynamoDBClient(config)
+
+    let sesConfig = {} as SESClientConfig
+    if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
+    else {
+      sesConfig["credentials"] = { 
+        accessKeyId: cdk["AIApparel-IamStack"].AccessKey, 
+        secretAccessKey: cdk["AIApparel-IamStack"].SecretKey 
+      }
+      sesConfig.region = 'us-east-1'
+    }
+    const ses = new SESClient(sesConfig)
 
     let orderItems: OrderItem[] = []
     for (let orderItemId of b.orders) {
@@ -166,8 +183,25 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
     })
     await client.send(command)
 
-    res.json({
+    const paymentResposne = {
       orderId, printifyId: response.id, squareId: result.payment?.id
-    } as PaymentResponse)
+    } as PaymentResponse
+
+
+    await ses.send( new SendEmailCommand({
+      Source: "no-reply@aiapparelstore.com",
+      Destination: { ToAddresses: [ "dominic.fung@icloud.com", "fung_dominic@hotmail.com" ] },
+      Message: {
+        Subject: { Data: "Thank You!" },
+        Body: {
+          Html: {
+            Charset: "UTF-8",
+            Data: (await generateEmail(customer, orderItems, price, b, paymentResposne)).html
+          }
+        }  
+      } 
+    }))
+
+    res.json(paymentResposne)
   }
 }

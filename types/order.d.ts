@@ -1,4 +1,4 @@
-
+import { LocationBasedVariant } from './printify'
 
 export interface OrderItem extends OrderItemRequest {
   orderItemId: string,
@@ -32,6 +32,7 @@ interface Order {
 export interface OrderItemRequest {
   printProviderId: string
   productId: string
+  itemId: string
   varients: LocationBasedVariant[]
   choice: LineItem[]
 }
