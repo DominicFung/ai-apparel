@@ -22,7 +22,7 @@ const NUM_IMAGES = 3
 
 const showCase = [
   "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
-  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/ucz6jdbkmvdmdnzmsv75aaa2xm/75191/full/original.png",
+  "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/svhbglzrnrht5d6o4n5cgsuuhi/74949/full/original.png",
   "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/hcbzzow2pvhvzcy5h4y2uxa4zu/53740/full/original.png",
 
   "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/printify-mockup/ywhspomwuzhzllf7idhwgk3g24/75982/full/original.png",
@@ -33,19 +33,19 @@ const Home: NextPageWithLayout = (props) => {
   const [prompt, setPrompt] = useState("")
   const [images, setImages] = useState<AIImageResponse[]>([
     {
-      id: "4hj6efalc5ge5bq4z32ys2kjv4",
+      id: "a2qcxz7q2zhb3kmq6q4teqer6q",
       status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg",
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/a2qcxz7q2zhb3kmq6q4teqer6q/original.jpg",
     },
     {
-      id: "sjlxtbxk6ne33ckpp2mcv3fae4",
+      id: "svhbglzrnrht5d6o4n5cgsuuhi",
       status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/sjlxtbxk6ne33ckpp2mcv3fae4/original.jpg",
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/svhbglzrnrht5d6o4n5cgsuuhi/original.jpg",
     },
     {
-      id: "sj7y4cdv3ngglo4bgszb6aafcu",
+      id: "4ed22wpbkvdm3kwerhvylp5yi4",
       status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/sj7y4cdv3ngglo4bgszb6aafcu/original.jpg",
+      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4ed22wpbkvdm3kwerhvylp5yi4/original.jpg",
     }
   ])
   const [generateResult, setGenerateResult] = useState<ReplicateStableDiffusionResponse[]>([])
@@ -278,7 +278,7 @@ const Home: NextPageWithLayout = (props) => {
             </Swiper>
           </div>
           <div className='max-w-screen-2xl hidden lg:block'>
-            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20 w-screen`}>Results!</h2>
+            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
             <div className='grid grid-cols-3 gap-3 px-20 py-2'>
               {images.map((i, e) => {
                 if (i && i.status === 'COMPLETE' && i.url) {
@@ -309,12 +309,21 @@ const Home: NextPageWithLayout = (props) => {
             </div>
           </div>
           <div className='flex justify-center'>
-            <div className='max-w-screen-2xl'>
-              <p className={`text-gray-50 p-8 lg:p-1`}>
-                In August 2022, text-to-image AI art has won the first place in a digital art competition.
+            <div className='max-w-screen-md pb-10 text-lg text-center'>
+              <p className={`text-gray-50 px-8 py-1 lg:p-4`}>
+                Our AI Apparel store uses the latest in generative AI technology to create unique and one-of-a-kind designs. Simply upload a photo of yourself, and our AI will generate a personalized design based on your unique features.
               </p>
-              <p className={`text-gray-50 p-8 lg:p-1`}>
-                As Text-to-Image models get better, 
+              <p className={`text-gray-50 px-8 py-1 lg:p-4`}>
+                Our AI-generated designs are perfect for print-on-demand apparel, allowing you to create custom t-shirts, hoodies, and more with your own personal touch. With our high-quality printing and fast turnaround time, you can have your custom apparel delivered to your doorstep in no time.
+              </p>
+              <p className={`text-gray-50 px-8 py-1 lg:p-4`}>
+                In addition to our AI-generated designs, we also offer a wide selection of pre-designed apparel for you to choose from. From trendy graphics to classic styles, we have something for everyone.
+              </p>
+              <p className={`text-gray-50 px-8 py-1 lg:p-4`}>
+              At AI Apparel, we are committed to providing the highest quality apparel and the best possible customer service. Our team of experts is always available to answer any questions you may have and help you create the perfect design for your unique style.
+              </p>
+              <p className={`text-gray-50 px-8 py-1 lg:p-4`}>
+                Keywords: AI, generative AI, personalized design, print-on-demand apparel, custom t-shirts, hoodies, pre-designed apparel, high-quality printing, fast turnaround time, customer service.
               </p>
             </div>
           </div>
