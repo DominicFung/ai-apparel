@@ -48,7 +48,7 @@ const Home: NextPageWithLayout = (props) => {
       url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4ed22wpbkvdm3kwerhvylp5yi4/original.jpg",
     }
   ])
-  const [generateResult, setGenerateResult] = useState<ReplicateStableDiffusionResponse[]>([])
+
   const [ loading, setLoading ] = useState(false)
 
   const [ openProducts, setOpenProducts ] = useState(false)
@@ -68,22 +68,34 @@ const Home: NextPageWithLayout = (props) => {
     })).json() as ReplicateStableDiffusionResponse[]
 
     console.log(response)
-    setGenerateResult([...response])
+
+    let temp = []
+    for (let i=0; i<response.length; i++) {
+      temp.push({id: response[i].id, status: 'PROCESSING'} as AIImageResponse)
+    }
+
+    setTimeout( reloadImages, 5000, temp)
+    setImages([...temp])
+    scroller.scrollTo("aiimages", {
+      duration: 1500,
+      delay: 100,
+      smooth: true,
+      offset: 50
+    })
   }
 
   const reloadImages = async (oldImgs: AIImageResponse[]) => {
     let newImgs = []
     let loading = false
-    
-    for (let i of oldImgs) {
-      let url = `/api/replicate/stablediffusion/${i.id}`
+
+    for (let i=0; i<oldImgs.length; i++) {
+      let url = `/api/replicate/stablediffusion/${oldImgs[i].id}`
       const response = await (await fetch(url)).json() as AIImageResponse
       newImgs.push(response)
-      if (response.status !== 'COMPLETE') { 
-        loading = true
-        setTimeout( reloadImages, 3600+(Math.random()*2000), newImgs )
-      }
+      if (response.status !== 'COMPLETE') { loading = true }
     }
+
+    if (loading) setTimeout( reloadImages, 3000, newImgs )
 
     setImages([... newImgs])
     setLoading(loading)
@@ -93,24 +105,6 @@ const Home: NextPageWithLayout = (props) => {
     setActiveItemId(itemId)
     setOpenProducts(true)
   }
-
-  useEffect(() => {
-    if (generateResult.length > 0) {
-      let temp = []
-      for (let i=0; i<generateResult.length; i++) {
-        temp.push({id: generateResult[i].id, status: 'PROCESSING'} as AIImageResponse)
-      }
-
-      setTimeout( reloadImages, 4600+(Math.random()*2000), temp)
-      setImages([...temp])
-      scroller.scrollTo("aiimages", {
-        duration: 1500,
-        delay: 100,
-        smooth: true,
-        offset: 50
-      })
-    }
-  }, [generateResult])
 
   useEffect(() => {
     console.log(images)
