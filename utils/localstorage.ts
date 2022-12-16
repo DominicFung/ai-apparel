@@ -1,4 +1,5 @@
 import { OrderItem } from "../types/order"
+import { AIImageResponse } from "../types/replicate"
 
 export const storeItems = (productId: string, obj: any[]) => {
   const temp = localStorage.getItem('cart')
@@ -62,4 +63,34 @@ export const getItemCount = (): number => {
 
   console.log(orderItems)
   return orderItems.length
+}
+
+// == AI 
+
+export const defaultImages = [
+  {
+    id: "a2qcxz7q2zhb3kmq6q4teqer6q",
+    status: "COMPLETE", //'COMPLETE',
+    url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/a2qcxz7q2zhb3kmq6q4teqer6q/original.jpg",
+  },
+  {
+    id: "svhbglzrnrht5d6o4n5cgsuuhi",
+    status: 'COMPLETE',
+    url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/svhbglzrnrht5d6o4n5cgsuuhi/original.jpg",
+  },
+  {
+    id: "4ed22wpbkvdm3kwerhvylp5yi4",
+    status: 'COMPLETE',
+    url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4ed22wpbkvdm3kwerhvylp5yi4/original.jpg",
+  }
+] as AIImageResponse[]
+
+export const setAIImageResponse = (a: AIImageResponse[]) => {
+  localStorage.setItem('home-AI', JSON.stringify(a))
+}
+
+export const getAIImageResponse = (): AIImageResponse[] => {
+  const temp = localStorage.getItem("home-AI")
+  if (temp) return JSON.parse(temp) as AIImageResponse[]
+  return defaultImages
 }

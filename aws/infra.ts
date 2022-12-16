@@ -4,6 +4,7 @@ import { S3Stack } from './stacks/s3-stack'
 import { DynamoStack } from './stacks/dynamo-stack'
 import { IamStack } from './stacks/iam-stack'
 import { ScheduleStack } from './stacks/schedule-stack'
+import { SNSStack } from './stacks/sns-stack'
 
 const PROJECT_NAME = 'AIApparel'
 const app = new App()
@@ -28,5 +29,11 @@ let scheduleStack = new ScheduleStack(app, `${PROJECT_NAME}-ScheduleStack`, {
   bucketName: `${PROJECT_NAME}Bucket`
 })
 scheduleStack.addDependency(s3Stack)
+
+new SNSStack(app, `${PROJECT_NAME}-SNSStack`, {
+  name: PROJECT_NAME,
+  ownerEmail: "dominic.fung@icloud.com",
+  sender: "no-reply@aiapparelstore.com"
+})
 
 app.synth()

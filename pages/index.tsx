@@ -17,6 +17,7 @@ import Head from 'next/head'
 
 import { AIImageResponse, GenerateAIImageRequest, ReplicateStableDiffusionResponse } from '../types/replicate'
 import DefaultLayout from '../components/layouts/default'
+import { getAIImageResponse, setAIImageResponse } from '../utils/localstorage'
 
 const NUM_IMAGES = 3
 
@@ -31,23 +32,7 @@ const showCase = [
 
 const Home: NextPageWithLayout = (props) => {
   const [prompt, setPrompt] = useState("")
-  const [images, setImages] = useState<AIImageResponse[]>([
-    {
-      id: "a2qcxz7q2zhb3kmq6q4teqer6q",
-      status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/a2qcxz7q2zhb3kmq6q4teqer6q/original.jpg",
-    },
-    {
-      id: "svhbglzrnrht5d6o4n5cgsuuhi",
-      status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/svhbglzrnrht5d6o4n5cgsuuhi/original.jpg",
-    },
-    {
-      id: "4ed22wpbkvdm3kwerhvylp5yi4",
-      status: 'COMPLETE',
-      url: "https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4ed22wpbkvdm3kwerhvylp5yi4/original.jpg",
-    }
-  ])
+  const [images, setImages] = useState<AIImageResponse[]>([])
 
   const [ loading, setLoading ] = useState(false)
 
@@ -96,6 +81,7 @@ const Home: NextPageWithLayout = (props) => {
     }
 
     if (loading) setTimeout( reloadImages, 3000, newImgs )
+    else { setAIImageResponse( newImgs ) }
 
     setImages([... newImgs])
     setLoading(loading)
@@ -107,8 +93,8 @@ const Home: NextPageWithLayout = (props) => {
   }
 
   useEffect(() => {
-    console.log(images)
-  }, [images])
+    setImages( getAIImageResponse() )
+  }, [])
 
   return (
     <>
@@ -152,9 +138,6 @@ const Home: NextPageWithLayout = (props) => {
             <div className={`${s.title} text-center lg:text-left text-2xl lg:text-8xl leading-relaxed`}>
               Free AI Apperal Designer
             </div>
-            {/* <p className={`${s.titleParagraph}`}>
-              Embrace your love of generative AI! 
-            </p> */}
             <p className={`${s.titleParagraph} hidden lg:inline-block text-base lg:text-2xl`}>
               Describe the image you want to see on your apparel and print!
             </p>
@@ -271,8 +254,8 @@ const Home: NextPageWithLayout = (props) => {
               })}
             </Swiper>
           </div>
-          <div className='max-w-screen-2xl hidden lg:block'>
-            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20`}>Results!</h2>
+          <div className='max-w-screen-2xl hidden lg:block overflow-x-hidden'>
+            <h2 className={`${s.resultTitle} text-5xl p-10 pt-20 w-screen`}>Results!</h2>
             <div className='grid grid-cols-3 gap-3 px-20 py-2'>
               {images.map((i, e) => {
                 if (i && i.status === 'COMPLETE' && i.url) {
