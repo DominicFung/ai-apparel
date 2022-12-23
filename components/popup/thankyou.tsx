@@ -66,7 +66,7 @@ export default function ThankYouPopup(props: ThankYouPopupProps){
                       <small style={{ color: "#637381", fontSize: "10px" }}> Printify: {props.paymentResponse?.printifyId}</small><br />
                     </p>
 
-                    <p>If you don&apos;t get it within 24hrs, please contact <a href="mailto:dominic.fung@icloud.com">Dom</a></p>
+                    <p>If you don&apos;t get it within 24hrs, please contact <a href="mailto:hello@aiapparelstore.com">hello@aiapparelstore.com</a></p>
 
                   </div>
                 </div>

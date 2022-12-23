@@ -261,35 +261,6 @@ const Item: NextPageWithLayout = (props) => {
     else { console.warn(`quanity is NAN: ${j}`) }
   }
 
-  // useEffect(() => {
-  //   let i = parseInt(quantityText)
-  //   if (i) { 
-  //     setQuantity(i)
-  //     if (tab >= i) { setTab(i-1) }
-
-  //     let oldLen = colorChoices.length
-  //     let dif = i - oldLen
-
-  //     if (dif > 0)
-  //       for (let a=0; a<dif; a++) {
-  //         colorChoices.push(0)
-  //         sizeChoices.push(Object.keys(sizes)[0])
-  //         customInstructions.push("")
-  //       }
-  //     else if (dif < 0)
-  //       for (let a=0; a>dif; a--) {
-  //         colorChoices.pop()
-  //         customInstructions.pop()
-  //       }
-  //     else console.log("No change in i value. OK")
-
-  //     setColorChoices(colorChoices)
-  //     setSizeChoices(sizeChoices)
-  //     setCustomInstructions(customInstructions)
-
-  //   } else { console.warn(`quanity is NAN: ${i}`) }
-  // }, [quantityText, colorChoices, customInstructions, sizeChoices, sizes, tab])
-
   const generateHQImage = async () => {
     let url = `/api/replicate/rudalle-sr/generate`
     let response = await (await fetch(url, {
@@ -320,6 +291,7 @@ const Item: NextPageWithLayout = (props) => {
 
       let key = `${s}::::${c}`
       if (dynamicProgramming[key]) {
+        dynamicProgramming[key].notes[dynamicProgramming[key].quantity] = customInstructions[i]
         dynamicProgramming[key].quantity += 1
       } else {
         if (printifyUpload) {
@@ -337,10 +309,9 @@ const Item: NextPageWithLayout = (props) => {
         dynamicProgramming[key] = {
           variantId: vid,
           printAreas,
-          quantity: 1
+          quantity: 1,
+          notes: [customInstructions[i]]
         } as LineItem
-
-        console.log(dynamicProgramming[key])
       }
     }
 

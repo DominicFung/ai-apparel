@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 
 import { ShoppingBagIcon } from '@heroicons/react/24/solid'
@@ -40,7 +40,7 @@ export default function AppBar () {
               </Link>
             </span>
             <span className='block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4'>
-              <Link href="/p">
+              <Link href="/">
                 Products
               </Link>
             </span>
@@ -53,7 +53,8 @@ export default function AppBar () {
           </div>
           <div className="flex flex-grow" />
           <div className={`text-sm flex flex-row items-center justify-between`}>
-            <a href="#responsive-header" className={`block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4`}>My Orders</a>
+            <span className={`block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4`}>
+              <Link href="/creations">Creations!</Link></span>
             <a href="#responsive-header" className={`block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4`}>About</a>
             <div>
               <span className="relative inline-block">

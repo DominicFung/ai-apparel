@@ -32,7 +32,7 @@ scheduleStack.addDependency(s3Stack)
 
 new SNSStack(app, `${PROJECT_NAME}-SNSStack`, {
   name: PROJECT_NAME,
-  ownerEmail: "dominic.fung@icloud.com",
+  ownerEmail: "hello@aiapparelstore.com",
   sender: "no-reply@aiapparelstore.com"
 })
 
