@@ -201,7 +201,8 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
         orderId, customerId: b.customerId,
         orderItemIds: b.orders,
         printify: { request: p, response: response },
-        square: { request: s, response: result }
+        square: { request: s, response: result },
+        environment: process.env.NODE_ENV
       } as Order, { removeUndefinedValues: true }),
       
     })
@@ -214,9 +215,11 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<P
 
     await ses.send( new SendEmailCommand({
       Source: "no-reply@aiapparelstore.com",
+      ConfigurationSetName: "aiapparelstore", // might not need
       Destination: { 
         ToAddresses: [ b.addressTo.email ],
-        BccAddresses: [ "dominic.fung@icloud.com", "fung_dominic@hotmail.com" ] 
+        CcAddresses: [ 'hello@aiapparelstore.com' ],
+        BccAddresses: [ "dominic.fung@icloud.com" ] 
       },
       Message: {
         Subject: { Data: "Thank You!" },

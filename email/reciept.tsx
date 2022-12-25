@@ -133,7 +133,8 @@ export const generateEmail = async (
               <MjmlText align="center" verticalAlign="middle">{v.title}</MjmlText>
               <MjmlText align="center" verticalAlign="middle">
                 <small>Price: </small>{convertedPrice} {customer.geo.currency.code} <br/>
-                <small>Quantity: </small>{c.quantity}
+                <small>Quantity: </small>{c.quantity}<br/>
+                { c.notes.map((e, i) => <small style={{color: "#2f2f2f"}}>Note {i}: <small style={{fontStyle: "italic"}}>{e}</small><br/></small>) }
               </MjmlText>
             </MjmlColumn>
           </MjmlSection>
@@ -249,13 +250,11 @@ export const generateEmail = async (
           <MjmlSection>
             <MjmlColumn width="100%" padding="0">
               <MjmlSocial font-size="15px" icon-size="30px" mode="horizontal" padding="0" align="center">
-                <MjmlSocialElement name="facebook" href="https://mjml.io/" background-color="#A1A0A0">
+                <MjmlSocialElement name="facebook" href="https://www.facebook.com/profile.php?id=100088965992234" background-color="#A1A0A0">
                 </MjmlSocialElement>
-                <MjmlSocialElement name="google" href="https://mjml.io/" background-color="#A1A0A0">
+                <MjmlSocialElement name="instagram" href="https://www.instagram.com/aiap.parel" background-color="#A1A0A0">
                 </MjmlSocialElement>
-                <MjmlSocialElement name="twitter" href="https://mjml.io/" background-color="#A1A0A0">
-                </MjmlSocialElement>
-                <MjmlSocialElement name="linkedin" href="https://mjml.io/" background-color="#A1A0A0">
+                <MjmlSocialElement name="linkedin" href="https://www.aiapparelstore.com" background-color="#A1A0A0">
                 </MjmlSocialElement>
               </MjmlSocial>
               <MjmlText color="#445566" font-size="11px" font-weight="bold" align="center">
@@ -263,7 +262,7 @@ export const generateEmail = async (
               </MjmlText>
               <MjmlText color="#445566" font-size="11px" align="center" line-height="16px">
                 You are receiving this email receipt because you've ordered an apparel from AI Apparel Store. If this is not something you've done, email us back at 
-                <a href="mailto:dominic.fung@icloud.com">dominic.fung@icloud.com</a>
+                <a href="mailto:hello@aiapparelstore.com">hello@aiapparelstore.com</a>
               </MjmlText>
               <MjmlText color="#445566" font-size="11px" align="center" line-height="16px">
                 &copy; AI Apparel Store, All Rights Reserved.
@@ -274,7 +273,9 @@ export const generateEmail = async (
             <MjmlGroup>
               <MjmlColumn width="100%" padding-right="0">
                 <MjmlText color="#445566" font-size="11px" align="center" line-height="16px" font-weight="bold">
-                  <a className="footer-link" href="https://www.google.com">Privacy</a>&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;<a className="footer-link" href="https://www.google.com">Unsubscribe</a>
+                  <a className="footer-link" href="https://www.aiapparelstore.com">
+                    Privacy</a>&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;
+                  <a className="footer-link" href={`https://www.aiapparelstore.com/unsubscribe/${request.addressTo.email}`}>Unsubscribe</a>
                 </MjmlText>
               </MjmlColumn>
             </MjmlGroup>

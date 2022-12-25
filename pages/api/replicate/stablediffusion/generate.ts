@@ -15,6 +15,7 @@ Amplify.configure({...config, ssr: true })
 import { AIService, GenerateAIImageRequest, ReplicateStableDiffusionRequest, ReplicateStableDiffusionResponse } from '../../../../types/replicate'
 import { Customer } from '../../../../types/customer'
 import { STABLEDIFF_MODEL_VERSION } from '../../../../types/constants'
+import { hasProfanity, hasTrademark } from '../../../../utils/utils'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<ReplicateStableDiffusionResponse[]>) {
   console.log(`GET /api/replicate/stablediffusion/generate`)
@@ -51,6 +52,10 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<R
         } as ReplicateStableDiffusionRequest)
       }).json() as ReplicateStableDiffusionResponse
 
+      // Check prompt for profanity and trademark
+      const isPrivate = hasProfanity(b.input.prompt) || hasTrademark(b.input.prompt)
+      const canAccess = [c.customerId]
+
       const service = {
         serviceId: replicateRes.id,
         customerId: c.customerId,
@@ -60,7 +65,10 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<R
         aiModel: 'stablediffusion',
         aiModelVersion: STABLEDIFF_MODEL_VERSION,
         serviceStatus: 'PROCESSING',
-        response: JSON.stringify(replicateRes)
+        response: JSON.stringify(replicateRes),
+
+        disable: false,
+        isPrivate, canAccess
       } as AIService
 
       if (replicateRes.error === null) {

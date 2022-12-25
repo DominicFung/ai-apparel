@@ -81,7 +81,11 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<S
           aiModel: 'rudalle-sr',
           aiModelVersion: RUDALLE_MODEL_VERSION,
           serviceStatus: 'PROCESSING',
-          response: JSON.stringify(replicateRes)
+          response: JSON.stringify(replicateRes),
+
+          disable: false,
+          isPrivate: false,
+          canAccess: []
       } as AIService
       const command2 = new PutItemCommand({
         TableName: cdk["AIApparel-DynamoStack"].AIApparelaiServiceTableName,

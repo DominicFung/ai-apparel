@@ -8,6 +8,10 @@ import namedColors from 'color-name-list'
 
 import { Tooltip } from "@material-tailwind/react"
 
+import 'swiper/css'
+import 'swiper/css/navigation'
+import 'swiper/css/pagination'
+
 import Drawer from '../../../../components/drawer'
 import Payment from '../../../../components/payment'
 
@@ -24,6 +28,9 @@ import { LineItem, OrderItem, OrderItemRequest } from '../../../../types/order'
 import { isBright } from '../../../../utils/utils'
 import ThankYouPopup from '../../../../components/popup/thankyou'
 import { PaymentResponse } from '../../../../types/square'
+import { EyeSlashIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid'
+import ItemNotFound from '../../../../components/popup/itemnotfound'
+import PrivatePopup from '../../../../components/popup/private'
 
 // http://localhost:3000/products/1090/item/5oa7mxuhifdovaddw3irl6esdu
 // http://localhost:3000/products/1090/item/ywhspomwuzhzllf7idhwgk3g24
@@ -39,7 +46,6 @@ interface Sizes {
     variant: IVariant[]
   }
 }
-const _ENV = 'Dev' as 'Dev' | 'Production'
 
 const colorNameToHex = (color: string): string => {
   let c = namedColors.find( c => c.name === color )
@@ -83,14 +89,33 @@ const Item: NextPageWithLayout = (props) => {
   const [ paymentResponse, setPaymentResponse ] = useState<PaymentResponse>()
   const [ thankyouOpen, setThankyouOpen ] = useState(false)
 
+  // if the item is private
+  const [ showPrivateWarning, setShowPrivateWarning ] = useState(false)
+  const [ imageNotFound, setImageNotFound ] = useState<boolean>()
+  const [ imageIsPrivate, setImageIsPrivate ] = useState("")
+
+
   /** AI Image */
   const getImage = async (serviceId: string) => {
     let url = `/api/replicate/stablediffusion/${serviceId}`
-    let response = await (await fetch(url)).json() as AIImageResponse
-    if (response.status === 'PROCESSING') { 
-      setTimeout( getImage, 600+(Math.random()*500), serviceId )
+    let r = await fetch(url)
+
+    console.log('HERE')
+    console.log(r.status)
+    if (r.status === 404 || r.status === 401) { setImageNotFound(true) }
+    else if (r.status === 403) { 
+      setImageNotFound(false)
+      const response = await (r).json() as string
+      setImageIsPrivate(response) 
+    } else {
+      setImageNotFound(false)
+      const response = await (r).json() as AIImageResponse
+      if (response.private) { setShowPrivateWarning(true) }
+      if (response.status === 'PROCESSING') { 
+        setTimeout( getImage, 600+(Math.random()*500), serviceId )
+      }
+      setAIImage(response)
     }
-    setAIImage(response)
   }
 
   const getProduct = async (productId: string) => {
@@ -169,10 +194,12 @@ const Item: NextPageWithLayout = (props) => {
         printprovider: product.printprovider
       } as VariantRequest
       
-      let response = await (await fetch(url, {
+      const r = await fetch(url, {
         method: "POST",
         body: JSON.stringify(body)
-      })).json() as VariantResponse
+      })
+      if (r.status >= 400) { return }
+      let response = await r.json() as VariantResponse
 
       setProviderVariant(response)
 
@@ -261,35 +288,6 @@ const Item: NextPageWithLayout = (props) => {
     else { console.warn(`quanity is NAN: ${j}`) }
   }
 
-  // useEffect(() => {
-  //   let i = parseInt(quantityText)
-  //   if (i) { 
-  //     setQuantity(i)
-  //     if (tab >= i) { setTab(i-1) }
-
-  //     let oldLen = colorChoices.length
-  //     let dif = i - oldLen
-
-  //     if (dif > 0)
-  //       for (let a=0; a<dif; a++) {
-  //         colorChoices.push(0)
-  //         sizeChoices.push(Object.keys(sizes)[0])
-  //         customInstructions.push("")
-  //       }
-  //     else if (dif < 0)
-  //       for (let a=0; a>dif; a--) {
-  //         colorChoices.pop()
-  //         customInstructions.pop()
-  //       }
-  //     else console.log("No change in i value. OK")
-
-  //     setColorChoices(colorChoices)
-  //     setSizeChoices(sizeChoices)
-  //     setCustomInstructions(customInstructions)
-
-  //   } else { console.warn(`quanity is NAN: ${i}`) }
-  // }, [quantityText, colorChoices, customInstructions, sizeChoices, sizes, tab])
-
   const generateHQImage = async () => {
     let url = `/api/replicate/rudalle-sr/generate`
     let response = await (await fetch(url, {
@@ -320,6 +318,7 @@ const Item: NextPageWithLayout = (props) => {
 
       let key = `${s}::::${c}`
       if (dynamicProgramming[key]) {
+        dynamicProgramming[key].notes[dynamicProgramming[key].quantity] = customInstructions[i]
         dynamicProgramming[key].quantity += 1
       } else {
         if (printifyUpload) {
@@ -337,10 +336,9 @@ const Item: NextPageWithLayout = (props) => {
         dynamicProgramming[key] = {
           variantId: vid,
           printAreas,
-          quantity: 1
+          quantity: 1,
+          notes: [customInstructions[i]]
         } as LineItem
-
-        console.log(dynamicProgramming[key])
       }
     }
 
@@ -392,10 +390,10 @@ const Item: NextPageWithLayout = (props) => {
   }, [productId, itemId])
 
   useEffect(() => {
-    if (product && itemId) {
+    if (product && itemId && imageNotFound === false) {
       putPrintifyImage(itemId as string, product.productId, String(product.printprovider))
     }
-  }, [product, itemId])
+  }, [product, itemId, imageNotFound])
 
   // Generate PREVIEW IMAGES
   useEffect(() => {
@@ -481,12 +479,13 @@ const Item: NextPageWithLayout = (props) => {
         )
       }
     ><section className=" w-screen h-full cursor-pointer " /></main>
-
+    <PrivatePopup startingImg={imageIsPrivate} itemId={itemId as string}/>
+    <ItemNotFound open={imageNotFound || false} itemId={itemId as string} productId={productId as string}/>
     <ThankYouPopup open={thankyouOpen} setOpen={setThankyouOpen} paymentResponse={paymentResponse} />
     <Drawer header='Payment' isOpen={paymentDrawerOpen} setIsOpen={setPaymentDrawerOpen}>
       <Payment customer={props.customer} orderItem={orderItem} fullImageServiceId={fullImageServiceId} serviceId={itemId as string} setPaymentResponse={setPaymentResponse} />
     </Drawer>
-    <div className={`${styles.mainBackground} w-full p-4 pt-10 lg:pt-32  flex justify-center pb-24`}>
+    <div className={`${styles.mainBackground} w-full p-4 lg:pt-32 flex justify-center pb-24 `+(showPrivateWarning?"pt-20":"pt-10")}>
       <div className="container mx-w-2xl">
         <div className="pt-20 pb-20 grid grid-cols-6 w-full gap-8">
           <div className="lg:col-span-4 col-span-6 lg:pl-0 pl-8">
@@ -676,6 +675,23 @@ const Item: NextPageWithLayout = (props) => {
         </div>
       </div>
     </div>
+    { showPrivateWarning && 
+      <div className="fixed top-0 pt-24 lg:pt-28 w-full" >
+        <div className="text-center py-0 lg:py-4 lg:px-4"
+          style={{background: "rgba(211,206,223, 0.8)"}}
+        >
+          <div className="p-2 items-center text-gray-50 leading-none lg:rounded-full flex lg:inline-flex" role="alert"
+            style={{background: "rgba(0,0,0,0.5)"}}
+          >
+            <span className="flex rounded-full bg-gray-400 uppercase px-2 py-1 text-xs font-bold mr-3">
+              <EyeSlashIcon className='w-4 h-4 text-white' />
+            </span>
+            <span className="font-semibold mr-2 text-left flex-auto">This item is only visible to you for a limited time.</span>
+            <QuestionMarkCircleIcon className='w-6 h-6 text-gray-50' />
+          </div>
+        </div>
+      </div>
+    }
   </>
   )
 }
