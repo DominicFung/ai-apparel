@@ -13,6 +13,7 @@
     "@aws-sdk/client-s3": "^3.194.0",
     "@aws-sdk/client-ses": "^3.226.0",
     "@aws-sdk/util-dynamodb": "^3.196.0",
+    "@domfung/trademark": "^1.0.5",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
     "@faire/mjml-react": "^3.0.0",
@@ -24,6 +25,7 @@
     "@square/web-sdk": "^2.0.1",
     "aws-amplify": "^4.3.41",
     "axios": "^1.1.3",
+    "bad-words": "^3.0.4",
     "color-name-list": "^9.22.0",
     "form-data-encoder": "^2.1.3",
     "formdata-node": "^5.0.0",
@@ -45,6 +47,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@types/bad-words": "^3.0.1",
     "@types/js-cookie": "^3.0.2",
     "@types/mjml-core": "^4.7.1",
     "@types/node": "18.11.3",

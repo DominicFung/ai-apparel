@@ -25,9 +25,9 @@ import { _Product } from '../../../types/product'
 
 
 //https://developers.printify.com/#catalog
-export default async function handler(req: NextApiRequest,res: NextApiResponse<VariantResponse>) {
+export default async function handler(req: NextApiRequest,res: NextApiResponse<VariantResponse|string>) {
   const token = req.cookies.token
-  if (!token) { res.status(401); return }
+  if (!token) { res.status(401).send("Unauthorized."); return }
 
   const customer = (await Iron.unseal(token, secret.seal, Iron.defaults)) as Customer
 

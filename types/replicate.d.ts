@@ -67,6 +67,7 @@ export interface AIImageResponse {
   status: "COMPLETE" | "PROCESSING" | "ERROR"
   url?: string
   prompt?: string
+  private?: boolean
 }
 
 /** AI Service Table */
@@ -88,4 +89,9 @@ export interface AIService {
   // serviceId of the super resolution
   superResolutionId?: string
   serviceUrl?: string
+  
+  // only applies if aiModel is stablediffusion
+  disable: boolean,    // If true, will make the product (item) completely invisible
+  isPrivate: boolean,  // If true, only customers in "canAccess" can access. A product can also be private if it has profanity, or trademark.
+  canAccess: string[]  // array of customer id.
 }

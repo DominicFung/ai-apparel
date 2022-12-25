@@ -1,6 +1,9 @@
 import { OrderItem } from "../types/order";
 import { LocationBasedVariant } from "../types/printify";
 
+import Filter from 'bad-words'
+import TM from '@domfung/trademark'
+
 export const BASEMARKUP = 1.9
 
 export const validateEmail = (email: string) => {
@@ -92,4 +95,14 @@ export const isBright = (color: string): boolean => {
   const c_b = parseInt(hex.substring(4, 4 + 2), 16);
   const brightness = ((c_r * 299) + (c_g * 587) + (c_b * 114)) / 1000;
   return brightness > 155;
+}
+
+export const hasProfanity = (s: string): boolean => {
+  const filter = new Filter()
+  return filter.isProfane(s)
+}
+
+export const hasTrademark = (s: string): boolean => {
+  const tm = new TM()
+  return tm.isTrademarked(s)
 }

@@ -3,7 +3,7 @@ import { NextPageWithLayout } from './_app'
 import Image from 'next/image'
 import s from '../styles/Home.module.scss'
 import { Element, scroller } from 'react-scroll'
-import { BoltIcon } from '@heroicons/react/24/solid'
+import { BoltIcon, QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/solid'
 
 import ProductPopup from '../components/popup/products'
 
@@ -19,6 +19,9 @@ import { AIImageResponse, GenerateAIImageRequest, ReplicateStableDiffusionRespon
 import DefaultLayout from '../components/layouts/default'
 import { getAIImageResponse, setAIImageResponse } from '../utils/localstorage'
 
+import Filter from 'bad-words'
+import TM from '@domfung/trademark'
+
 const NUM_IMAGES = 3
 
 const showCase = [
@@ -31,6 +34,9 @@ const showCase = [
 ]
 
 const Home: NextPageWithLayout = (props) => {
+  const filter = new Filter()
+  const tm = new TM()
+
   const [prompt, setPrompt] = useState("")
   const [images, setImages] = useState<AIImageResponse[]>([])
 
@@ -39,7 +45,20 @@ const Home: NextPageWithLayout = (props) => {
   const [ openProducts, setOpenProducts ] = useState(false)
   const [ activeItemId, setActiveItemId ] = useState<string>("")
 
+  const [ openWarning, setOpenWarning ] = useState(false)
+
+  let checkProfanityOrTrademark = () => {
+    const isProfane = filter.isProfane(prompt)
+    console.log(`is profane? ${isProfane}`)
+
+    const isTrademarked = tm.isTrademarked(prompt)
+    console.log(`is Tademarked? ${isTrademarked}`)
+
+    setOpenWarning(isProfane || isTrademarked)
+  }
+
   let generateImages = async () => {
+    checkProfanityOrTrademark()
     setLoading(true)
     let url = '/api/replicate/stablediffusion/generate'
     let response = await (await fetch(url, {
@@ -95,6 +114,14 @@ const Home: NextPageWithLayout = (props) => {
   useEffect(() => {
     setImages( getAIImageResponse() )
   }, [])
+
+  useEffect(() => {
+    if (openWarning) {
+      setTimeout(() => {
+        setOpenWarning(false)
+      }, 8000)
+    }
+  }, [openWarning])
 
   return (
     <>
@@ -312,6 +339,21 @@ const Home: NextPageWithLayout = (props) => {
       
     </div>
     <ProductPopup itemId={activeItemId} open={openProducts} setOpen={setOpenProducts} />
+
+    <div className={'z-50 fixed bottom-5 md:left-5 delay-400 duration-500 ease-in-out transition-all transform  '+ 
+        (openWarning ? 'translate-y-0' : 'translate-y-72') }>
+      <div className="bg-orange-100 border border-orange-400 text-orange-700 px-4 py-3 rounded" role="alert">
+        <span className="block sm:inline pl-5 pr-20">
+          You will not be able to share creations that have <span className='font-bold'>profanity</span> or <span className='font-bold'>trademarked</span> words. Read more <a href='/'>here</a>.
+        </span>
+        <span className="absolute top-0 bottom-0 right-0 pr-16 py-3">
+          <QuestionMarkCircleIcon className='w-6 h-6 text-orange-700'/>
+        </span>
+        <span className='absolute top-0 bottom-0 right-0 pr-4 py-3' onClick={() => { setOpenWarning(false) }}>
+          <XMarkIcon className='w-6 h-6 text-orange-500' />
+        </span>
+      </div>
+    </div>
     </>
   )
 }

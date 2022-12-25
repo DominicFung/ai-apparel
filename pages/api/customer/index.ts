@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
         res.json({ token: refreshToken, currency: customer.geo.currency.code, exchangeRate: conversion.rates[customer.geo.currency.code] })
         return
       }
-    }  
+    }
     
     if (b.ip) {
       console.log(b.ip)
