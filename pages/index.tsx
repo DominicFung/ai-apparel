@@ -21,6 +21,7 @@ import { getAIImageResponse, setAIImageResponse } from '../utils/localstorage'
 
 import Filter from 'bad-words'
 import TM from '@domfung/trademark'
+import Link from 'next/link'
 
 const NUM_IMAGES = 3
 
@@ -344,7 +345,7 @@ const Home: NextPageWithLayout = (props) => {
         (openWarning ? 'translate-y-0' : 'translate-y-72') }>
       <div className="bg-orange-100 border border-orange-400 text-orange-700 px-4 py-3 rounded" role="alert">
         <span className="block sm:inline pl-5 pr-20">
-          You will not be able to share creations that have <span className='font-bold'>profanity</span> or <span className='font-bold'>trademarked</span> words. Read more <a href='/'>here</a>.
+          You will not be able to share creations that have <span className='font-bold'>profanity</span> or <span className='font-bold'>trademarked</span> words. Read more <Link href='/'>here</Link>.
         </span>
         <span className="absolute top-0 bottom-0 right-0 pr-16 py-3">
           <QuestionMarkCircleIcon className='w-6 h-6 text-orange-700'/>
