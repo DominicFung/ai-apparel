@@ -3,7 +3,7 @@ import { NextPageWithLayout } from './_app'
 import Image from 'next/image'
 import s from '../styles/Home.module.scss'
 import { Element, scroller } from 'react-scroll'
-import { BoltIcon, QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/solid'
+import { ArrowPathRoundedSquareIcon, BoltIcon, QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/solid'
 
 import ProductPopup from '../components/popup/products'
 
@@ -22,6 +22,7 @@ import { getAIImageResponse, setAIImageResponse } from '../utils/localstorage'
 import Filter from 'bad-words'
 import TM from '@domfung/trademark'
 import Link from 'next/link'
+import { generatePrompt } from '../utils/utils'
 
 const NUM_IMAGES = 3
 
@@ -107,6 +108,10 @@ const Home: NextPageWithLayout = (props) => {
     setLoading(loading)
   }
 
+  const genPrompt = () => {
+    setPrompt(generatePrompt())
+  }
+
   const selectAiImage = (itemId: string) => {
     setActiveItemId(itemId)
     setOpenProducts(true)
@@ -173,7 +178,7 @@ const Home: NextPageWithLayout = (props) => {
             <div className='flex w-full flex-row-reverse lg:mt-10'>
               <button onClick={generateImages}
                 className={`${s.actionButton} hidden lg:flex flex-row py-5 px-3 text-white rounded hover:bg-gray-700 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none`}
-                disabled={loading}
+                disabled={loading || prompt === ""}
               > 
                 { loading && 
                 <div role="status" className='h-0 w-full flex justify-center'>
@@ -185,15 +190,21 @@ const Home: NextPageWithLayout = (props) => {
                 </div> }
                 <span className='flex flex-row'>
                   <span className='px-1'>Generate</span>
-                  <BoltIcon className={`${s.actionIcon} h-6 w-6 inline-block ${ loading ? "text-gray-200" : "text-yellow-200" }`} />
+                  <BoltIcon className={`${s.actionIcon} h-6 w-6 inline-block ${ loading || prompt === "" ? "text-gray-200" : "text-yellow-200" }`} />
                 </span>
+              </button>
+              <button onClick={genPrompt}
+                className={`${s.actionButton} hidden lg:flex flex-row mx-1 py-5 px-5 text-white rounded hover:bg-gray-700 hover:text-white active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none`}
+                disabled={loading}
+              > 
+                <ArrowPathRoundedSquareIcon className={`${s.actionIcon} h-6 w-6 inline-block ${ loading ? "text-gray-200" : "text-white" }`} />
               </button>
 
               <input
                 value={prompt}
                 onChange={(e) => { setPrompt(e.target.value) }}
                 type="text"
-                className="form-control hidden lg:block w-full mx-1 p-3 lg:text-xl
+                className="form-control hidden lg:block w-full mx-0 p-3 lg:text-xl
                   font-normal
                   text-gray-700
                   bg-white bg-clip-padding
@@ -209,7 +220,7 @@ const Home: NextPageWithLayout = (props) => {
               <textarea rows={3} 
                 value={prompt}
                 onChange={(e) => { setPrompt(e.target.value) }}
-                className="form-control block lg:hidden w-full mx-1 p-3 lg:text-xl
+                className="form-control block lg:hidden w-full mx-0 p-3 lg:text-xl
                   font-normal
                   text-gray-700
                   bg-white bg-clip-padding
@@ -223,10 +234,16 @@ const Home: NextPageWithLayout = (props) => {
                 placeholder="New York City skyline blue pink newspaper collage."
               />
             </div>
-            <div className='flex lg:hidden w-full justify-center'>
+            <div className='flex justify-center lg:hidden w-full'>
+              <button onClick={genPrompt}
+                className={`${s.actionButton} justify-center my-1 py-3 px-3 text-white rounded active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none`}
+                disabled={loading}
+              > 
+                <ArrowPathRoundedSquareIcon className={`${s.actionIcon} h-6 w-6 inline-block ${ loading ? "text-gray-200" : "text-white" }`} />
+              </button>
               <button onClick={generateImages}
                   className={`${s.actionButton} justify-center m-1 py-3 px-3 text-white rounded active:shadow-lg mouse shadow transition ease-in duration-200 focus:outline-none`}
-                  disabled={loading && !props.customer}
+                  disabled={loading || prompt === ""}
               > 
                 { loading && 
                 <div role="status" className='h-0'>
@@ -239,9 +256,10 @@ const Home: NextPageWithLayout = (props) => {
               
                 <span className='flex flex-row'>
                   <span className='px-1'>Generate</span>
-                  <BoltIcon className={`${s.actionIcon} h-6 w-6 inline-block ${ loading ? "text-gray-200" : "text-yellow-200" }`} />
+                  <BoltIcon className={`${s.actionIcon} h-6 w-6 inline-block ${ loading || prompt === "" ? "text-gray-200" : "text-yellow-200" }`} />
                 </span>
               </button>
+
             </div>
             
           </div>
