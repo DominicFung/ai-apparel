@@ -93,5 +93,5 @@ export interface AIService {
   // only applies if aiModel is stablediffusion
   disable: boolean,    // If true, will make the product (item) completely invisible
   isPrivate: boolean,  // If true, only customers in "canAccess" can access. A product can also be private if it has profanity, or trademark.
-  canAccess: string[]  // array of customer id.
+  canAccess?: string[]  // array of customer id. All new (Post Dec 27 AIService) will have this.
 }
