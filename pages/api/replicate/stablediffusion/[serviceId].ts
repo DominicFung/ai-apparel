@@ -90,13 +90,13 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<A
 
         console.log(`service private? ${service.isPrivate}`)
         console.log(`canAccess: ${service.canAccess}, customerId: ${customer.customerId}`)
-        console.log(`what: ${service.canAccess.includes(customer.customerId)}`)
+        console.log(`what: ${service.canAccess?.includes(customer.customerId)}`)
 
         if (service.disable) {
           res.status(401).send("Unauthorized."); return
-        } else if (service.isPrivate && !service.canAccess.includes(customer.customerId)) {
+        } else if (service.isPrivate && service.canAccess && !service.canAccess.includes(customer.customerId)) {
           res.status(403).json(`https://${cdk["AIApparel-S3Stack"].bucketName}.s3.amazonaws.com/${key}`); return
-        } else if (service.isPrivate && service.canAccess.includes(customer.customerId)) {
+        } else if (service.isPrivate && service.canAccess && service.canAccess.includes(customer.customerId)) {
           res.status(200).json({
             id: serviceId,
             status: "COMPLETE",
@@ -105,6 +105,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<A
             private: true
           }); return
         } else {
+          console.log("returning good stuff")
           res.status(200).json({
             id: serviceId,
             status: "COMPLETE",
