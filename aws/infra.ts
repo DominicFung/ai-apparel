@@ -5,6 +5,7 @@ import { DynamoStack } from './stacks/dynamo-stack'
 import { IamStack } from './stacks/iam-stack'
 import { ScheduleStack } from './stacks/schedule-stack'
 import { SNSStack } from './stacks/sns-stack'
+import { ApiGatewayStack } from './stacks/apigateway-stack'
 
 const PROJECT_NAME = 'AIApparel'
 const app = new App()
@@ -35,5 +36,11 @@ new SNSStack(app, `${PROJECT_NAME}-SNSStack`, {
   ownerEmail: "hello@aiapparelstore.com",
   sender: "no-reply@aiapparelstore.com"
 })
+
+let gatewayStack = new ApiGatewayStack(app, `${PROJECT_NAME}-APIGatewayStack`, {
+  name: PROJECT_NAME,
+  restAPIName: "ai-apparel-social"
+})
+gatewayStack.addDependency(dynamoStack)
 
 app.synth()

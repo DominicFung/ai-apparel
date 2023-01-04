@@ -9,11 +9,15 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/google-spreadsheet": "^3.3.0",
     "@types/node": "^18.7.6"
   },
   "dependencies": {
+    "@googleapis/sheets": "^4.0.1",
     "aws-sdk": "^2.1197.0",
-    "@aws-sdk/client-ecs": "^3.192.0",
-    "node-fetch": "^3.2.10"
+    "install": "^0.13.0",
+    "moment": "^2.29.4",
+    "node-fetch": "^3.2.10",
+    "npm": "^9.2.0"
   }
 }
