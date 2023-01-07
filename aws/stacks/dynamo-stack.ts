@@ -1,5 +1,10 @@
-import { App, CfnOutput, RemovalPolicy, Stack } from 'aws-cdk-lib'
+import { App, CfnOutput, Duration, RemovalPolicy, Stack } from 'aws-cdk-lib'
 import { AttributeType, BillingMode, StreamViewType, Table } from 'aws-cdk-lib/aws-dynamodb'
+import { ManagedPolicy, Policy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
+import { Runtime, StartingPosition } from 'aws-cdk-lib/aws-lambda'
+import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
+import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs'
+import { join } from 'path'
 
 interface DynamoProps {
   name: string
@@ -112,7 +117,7 @@ export class DynamoStack extends Stack {
     })
 
     const customerTable = new Table (this, `${props.name}-customerTable`, {
-      tableName: `${props.name}-CustomerDable`,
+      tableName: `${props.name}-CustomerTable`,
       partitionKey: {
         name: `customerId`,
         type: AttributeType.STRING
@@ -130,6 +135,80 @@ export class DynamoStack extends Stack {
     new CfnOutput(this, `${props.name}-customerTableArn`, {
       value: customerTable.tableArn,
       exportName: `${props.name}-customerTableArn`
+    })
+
+    const TTL = "ttl"
+    const socialTable = new Table (this, `${props.name}-socialTable`, {
+      tableName: `${props.name}-SocialTable`,
+      partitionKey: {
+        name: `socialId`,
+        type: AttributeType.STRING
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      stream: StreamViewType.NEW_IMAGE,
+      removalPolicy: RPOLICY,
+      timeToLiveAttribute: TTL
+    })
+
+    const excRole = new Role(this, `${props.name}-SocialMediaLambdaRole`, {
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com')
+    })
+
+    excRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")
+    )
+
+    excRole.attachInlinePolicy(
+      new Policy(this, `${props.name}-InlinePolicy`, {
+        statements: [
+          new PolicyStatement({
+            actions: [
+              "secretsmanager:GetResourcePolicy",
+              "secretsmanager:GetSecretValue",
+              "secretsmanager:DescribeSecret",
+              "secretsmanager:ListSecretVersionIds",
+              "secretsmanager:ListSecrets"
+            ],
+            resources: ["*"]
+          })
+        ]
+      })
+    )
+
+    const nodeJsFunctionProps: NodejsFunctionProps = {
+      role: excRole,
+      bundling: { externalModules: ['aws-sdk'] },
+      depsLockFilePath: join(__dirname, '../lambdas', 'package-lock.json'),
+      environment: {
+        TABLE_NAME: socialTable.tableName
+      },
+      runtime: Runtime.NODEJS_16_X,
+    }
+
+    const createPost = new NodejsFunction(this, `${props.name}-CreatePost`, {
+      entry: join(__dirname, '../lambdas', 'social', 'post.ts'),
+      memorySize: 10240,
+      timeout: Duration.minutes(5),
+      ...nodeJsFunctionProps
+    })
+
+    createPost.addEventSource(new DynamoEventSource(socialTable, {
+      startingPosition: StartingPosition.LATEST
+    }))
+
+    new CfnOutput(this, `${props.name}-socialTableName`, {
+      value: socialTable.tableName,
+      exportName: `${props.name}-socialTableName`
+    })
+
+    new CfnOutput(this, `${props.name}-socialTableArn`, {
+      value: socialTable.tableArn,
+      exportName: `${props.name}-socialTableArn`
+    })
+
+    new CfnOutput(this, `${props.name}-socialTableTTL`, {
+      value: TTL,
+      exportName: `${props.name}-socialTableTTL`
     })
   }
 }

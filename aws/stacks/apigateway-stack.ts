@@ -1,5 +1,5 @@
-import { App, CfnOutput, Duration, Stack } from 'aws-cdk-lib'
-import { Cors, IResource, LambdaIntegration, MockIntegration, PassthroughBehavior, Period, RestApi } from 'aws-cdk-lib/aws-apigateway'
+import { App, CfnOutput, Duration, Fn, Stack } from 'aws-cdk-lib'
+import { Cors, LambdaIntegration, Period, RestApi } from 'aws-cdk-lib/aws-apigateway'
 
 import { ManagedPolicy, Policy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Runtime } from 'aws-cdk-lib/aws-lambda'
@@ -15,6 +15,8 @@ interface ApiGatewayProps {
 export class ApiGatewayStack extends Stack {
   constructor(app: App, id: string, props: ApiGatewayProps) {
     super(app, id)
+
+    const socialDynamoName = Fn.importValue(`${props.name}-socialTableName`)
 
     const excRole = new Role(this, `${props.name}-SocialMediaLambdaRole`, {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com')
@@ -42,23 +44,31 @@ export class ApiGatewayStack extends Stack {
     )
 
     const nodeJsFunctionProps: NodejsFunctionProps = {
-      bundling: {
-        externalModules: ['aws-sdk'],
-      },
+      role: excRole,
+      bundling: { externalModules: ['aws-sdk'] },
       depsLockFilePath: join(__dirname, '../lambdas', 'package-lock.json'),
+      environment: {
+        TABLE_NAME: socialDynamoName
+      },
       runtime: Runtime.NODEJS_16_X,
     }
 
-    const processHolidays = new NodejsFunction(this, `${props.name}-ProcessHolidayFunction`, {
-      entry: join(__dirname, '../lambdas', 'socialMedia.ts'),
-      handler: "processHolidays",
-      role: excRole,
+    const createSchedule = new NodejsFunction(this, `${props.name}-CreateSchedule`, {
+      entry: join(__dirname, '../lambdas', 'social', 'createSchedule.ts'),
       memorySize: 10240,
       timeout: Duration.minutes(15),
       ...nodeJsFunctionProps
     })
 
-    const processHolidaysIntegration = new LambdaIntegration(processHolidays)  
+    const updateSchedule = new NodejsFunction(this, `${props.name}-SchedulePosts`, {
+      entry: join(__dirname, '../lambdas', 'social', 'updateSchedule.ts'),
+      memorySize: 10240,
+      timeout: Duration.minutes(15),
+      ...nodeJsFunctionProps
+    })
+
+    const createScheduleIntegration = new LambdaIntegration(createSchedule)  
+    const updateScheduleIntegration = new LambdaIntegration(updateSchedule)
     
     // Create an API Gateway resource for each of the CRUD operations
     const api = new RestApi(this, 'SocialAPI', {
@@ -72,7 +82,10 @@ export class ApiGatewayStack extends Stack {
     })
 
     const social = api.root.addResource('api').addResource('social')
-    social.addMethod('POST', processHolidaysIntegration, { apiKeyRequired: true })
+
+    const schedule = social.addResource('schedule')
+    schedule.addResource('create').addMethod('POST', createScheduleIntegration, { apiKeyRequired: true })
+    schedule.addResource('update').addMethod('POST', updateScheduleIntegration, { apiKeyRequired: true })
 
     const plan = api.addUsagePlan(`${props.name}-UsagePlan`, {
       throttle: {
@@ -96,32 +109,4 @@ export class ApiGatewayStack extends Stack {
       exportName: `${props.name}-SocialAPIKey`
     })
   }
-}
-
-export function addCorsOptions(apiResource: IResource) {
-  apiResource.addMethod('OPTIONS', new MockIntegration({
-    integrationResponses: [{
-      statusCode: '200',
-      responseParameters: {
-        'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
-        'method.response.header.Access-Control-Allow-Origin': "'*'",
-        'method.response.header.Access-Control-Allow-Credentials': "'false'",
-        'method.response.header.Access-Control-Allow-Methods': "'OPTIONS,GET,PUT,POST,DELETE'",
-      },
-    }],
-    passthroughBehavior: PassthroughBehavior.NEVER,
-    requestTemplates: {
-      "application/json": "{\"statusCode\": 200}"
-    },
-  }), {
-    methodResponses: [{
-      statusCode: '200',
-      responseParameters: {
-        'method.response.header.Access-Control-Allow-Headers': true,
-        'method.response.header.Access-Control-Allow-Methods': true,
-        'method.response.header.Access-Control-Allow-Credentials': true,
-        'method.response.header.Access-Control-Allow-Origin': true,
-      },
-    }]
-  })
 }

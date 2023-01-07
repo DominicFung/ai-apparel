@@ -1,62 +1,15 @@
-//import { Configuration, OpenAIApi } from 'openai'
-import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 
+import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 import { SecretsManagerClient, SecretsManagerClientConfig, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager"
 
-//import moment from 'moment'
-
-const _spreadsheet = "10EvUZIYdCvB-FHQz7HYMKk195lkZqrEpadAJsnJPzJ4"
-const _masterSheetTitle = "Holidays"
-
-const _daysOfTheWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const
-export type DaysOfTheWeek = typeof _daysOfTheWeek[number]
-const primeTime = {
-  Sunday: [{ hr: 10, pm: true, min: 5 }],
-  Monday: [{ hr: 10, pm: true, min: 5 }],
-  Tuesday: [{ hr: 10, pm: true, min: 5 }],
-  Wednesday: [{ hr: 10, pm: true, min: 5 }],
-  Thursday: [{ hr: 10, pm: true, min: 5 }],
-  Friday: [{ hr: 10, pm: true, min: 5 }],
-  Saturday: [{ hr: 10, pm: true, min: 5 }]
-} as {[ d in DaysOfTheWeek ]: {hr: number, pm?: boolean, min: number}[]}
-
-const _headersMaster = ["Month", "Day", "Holidy", "Facebook", "Instagram", "Vibe" ] as const
-export type HeadersMaster = typeof _headersMaster[number]
-
-const _months = ["January", "Febuary", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] as const
-export type Month = typeof _months[number]
-
-const _alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const _headersDrillDown = ["Year", "Month", "Day", "Hour", "Min", "Row", "Platform"]
-export type HeadersDrillDown = typeof _headersDrillDown[number]
-
-interface PostRequirment {
-  holiday: string, 
-  posts: number
-  postBy: number // based on index of PrimeTimeCalendar
-  row: number,
-
-  // postDate: {
-  //   year: number,
-  //   month: Month,
-  //   day: number
-  // }
-}
-
-interface EmptyPost {
-  postDate: {
-    year: number,
-    month: Month,
-    day: number,
-    hour: number,
-    minute: number
-  }
-}
-
-interface Post extends EmptyPost, PostRequirment { }
+import { 
+  DaysOfTheWeek, EmptyItinerary, getSheetTab, head, HeadersDrillDown, HeadersMaster, Itinerary, Month, placeholderHeader, PostRequirment, primeTime, 
+  _alphabet, _daysOfTheWeek, _headersDrillDown, _headersMaster, _masterSheetTitle, _months, _spreadsheet 
+} from './global'
 
 /**
  * Main processor for "Holidy" page.
+ * Will create 12 "<Month><Year>" pages as a result. Scheduled.
  * 
  * This functions takes the sheet tab "Holidy" and parses for: 
  *    - each holidays
@@ -81,7 +34,7 @@ interface Post extends EmptyPost, PostRequirment { }
  * @param event 
  * @returns 
  */
-export const processHolidays = async (event: any): Promise<{statusCode: number, body: string}> => {
+export const handler = async (event: any): Promise<{statusCode: number, body: string}> => {
   console.log(event)
   if (!event.body)        return { statusCode: 400, body: "bad request" }
   const body = JSON.parse(event.body) as { month: Month, year: string }
@@ -115,10 +68,7 @@ export const processHolidays = async (event: any): Promise<{statusCode: number, 
     const masterTab = await getSheetTab(authClient, { tabName: _masterSheetTitle, lastRow: 200, lastColumn: "Z" })
     if (masterTab && masterTab.data) {
 
-      let headers = {
-        "Month": -1, "Day": -1, "Holidy": -1, "Facebook": -1, "Instagram": -1, "Vibe": -1,
-      } as {[k in HeadersMaster]: number}
-
+      let headers = placeholderHeader(_headersMaster as HeadersMaster[])
       let fb = [] as PostRequirment[]
       let insta = [] as PostRequirment[]
 
@@ -130,17 +80,7 @@ export const processHolidays = async (event: any): Promise<{statusCode: number, 
 
       for (const {r, i} of grid.rowData!.map((r, i) => ({r, i}))) {
         if (i === 0) { // parse headers
-          for (const c in r.values!) {
-            if (r.values![c].formattedValue && Object.keys(headers).includes(r.values![c].formattedValue as string))
-              headers[r.values![c].formattedValue as keyof typeof headers] = Number.parseInt(c)
-          }
-          console.log(`HEADERS: ${JSON.stringify(headers, null, 2)}`)
-
-          // check headers before proceeding
-          for (const k of Object.keys(headers)) { 
-            if (headers[k as unknown as HeadersMaster] < 0) 
-              return { statusCode: 400, body: `Missing Header: ${k}. Check your Sheet.` }
-          }
+          headers = head(_headersMaster, r)
         } else {
           // Check: this is a valid row for parsing & skips rows that happen before our month.
           if (
@@ -159,17 +99,13 @@ export const processHolidays = async (event: any): Promise<{statusCode: number, 
             fb.push({ 
               holiday: r.values![headers.Holidy].effectiveValue?.stringValue as string,
               posts: r.values![headers.Facebook].effectiveValue?.numberValue || 0,
-              postBy: mem.count - 1,
-              row: i,
-              //postDate: { year: mem.year, month: mem.month, day: mem.day }
+              postBy: mem.count - 1, row: i
             })
 
             insta.push({
               holiday: r.values![headers.Holidy].effectiveValue?.stringValue as string,
               posts: r.values![headers.Instagram].effectiveValue?.numberValue || 0,
-              postBy: mem.count - 1,
-              row: i,
-              //postDate: { year: mem.year, month: mem.month, day: mem.day }
+              postBy: mem.count - 1, row: i
             })
           }
         }
@@ -196,17 +132,13 @@ export const processHolidays = async (event: any): Promise<{statusCode: number, 
           fb.push({ 
             holiday: r.values![headers.Holidy].effectiveValue?.stringValue as string,
             posts: r.values![headers.Facebook].effectiveValue?.numberValue || 0,
-            postBy: mem.count - 1,
-            row: i,
-            //postDate: { year: mem.year, month: mem.month, day: mem.day }
+            postBy: mem.count - 1, row: i
           })
 
           insta.push({
             holiday: r.values![headers.Holidy].effectiveValue?.stringValue as string,
             posts: r.values![headers.Instagram].effectiveValue?.numberValue || 0,
-            postBy: mem.count - 1,
-            row: i,
-            //postDate: { year: mem.year, month: mem.month, day: mem.day }
+            postBy: mem.count - 1, row: i
           })
         } else break
       }
@@ -230,32 +162,6 @@ export const processHolidays = async (event: any): Promise<{statusCode: number, 
     return { statusCode: 500, body: "Server Error" }
   }
   return { statusCode: 500, body: "Server Error" }
-}
-
-/** Helpers */
-const getSheetTab = async (
-  auth: any, options?: {
-    tabName: string, lastRow: number, lastColumn: string, 
-  }
-): Promise<sheets_v4.Schema$Sheet|null> => {
-  const client = sheets({
-    version: "v4", auth
-  })
-  let params = {
-    spreadsheetId: _spreadsheet,
-    includeGridData: true
-  } as sheets_v4.Params$Resource$Spreadsheets$Get
-  if (options) { params.ranges = [ `${options.tabName}!A1:${options.lastColumn}${options.lastRow}` ] } 
-  const oursheet = await client.spreadsheets.get(params)
-  const tabs = oursheet.data.sheets
-  if (tabs && tabs.length > 0) {
-    for (const t of tabs) {
-      if (t.properties?.title === _masterSheetTitle) { return t } 
-    }
-  }
-
-  console.log("getSheetTab() returning null ..")
-  return null
 }
 
 const getPrimeTimesPerWeekDayDiff = (
@@ -284,8 +190,8 @@ const getPrimeTimesPerWeekDayDiff = (
 const generateSchedule = (
   s: { year: number, month: number, day: number }, 
   primeTimes: number, requirements: PostRequirment[]
-): (Post|EmptyPost)[] => {
-  let schedule = Array(primeTimes).fill(null) as (Post|EmptyPost)[]
+): (Itinerary|EmptyItinerary)[] => {
+  let schedule = Array(primeTimes).fill(null) as (Itinerary|EmptyItinerary)[]
 
   let start = new Date(s.year, s.month, s.day)
 
@@ -305,7 +211,7 @@ const generateSchedule = (
         day: start.getDate(),
         hour: info.hr,
         minute: info.min
-      } } as EmptyPost
+      } } as EmptyItinerary
     }
     
     currentDay = (currentDay + 1) % 7
@@ -313,16 +219,16 @@ const generateSchedule = (
   }
 
   for (const r of requirements) {
-    let conflict = [] as { index: number, r1: Post, r2: PostRequirment, bias: number }[]  // this is a queue
+    let conflict = [] as { index: number, r1: Itinerary, r2: PostRequirment, bias: number }[]  // this is a queue
     let i = r.postBy, posts = r.posts
     while (posts > 0) {
       if (i < 0) { console.warn(`while scheduling ${r.holiday}, This holiday will not get the number of post specified by admin. You're short by ${r.posts - (r.postBy-i)} posts.`); break }
       if (i >= schedule.length ) { console.error(`Index out of error while scheduling ${r.holiday}. This should not be possible`); break}
 
       if (schedule[i] === null) { console.error(`Null detected in schedule[${i}]`) }
-      else if (!(schedule[i] as Post ).holiday) { schedule[i] = {...r, postDate: { ...schedule[i].postDate }}; posts-- }
-      else if (i === (schedule[i] as Post).postBy ) { /** Do nothing, this is the exact holiday date */ }
-      else { conflict.push({ index: i, r1: schedule[i] as Post, r2: r, bias: 0.6 }); posts-- }
+      else if (!(schedule[i] as Itinerary ).holiday) { schedule[i] = {...r, postDate: { ...schedule[i].postDate }}; posts-- }
+      else if (i === (schedule[i] as Itinerary).postBy ) { /** Do nothing, this is the exact holiday date */ }
+      else { conflict.push({ index: i, r1: schedule[i] as Itinerary, r2: r, bias: 0.6 }); posts-- }
       i--
     }
 
@@ -342,11 +248,11 @@ const generateSchedule = (
       if ( i < 0 || i >= schedule.length ) { console.warn(`i is now out of bounds (${i}), will not be creating anymore conflicts`); break }
 
       if (schedule[i] === null) { console.error(`Null detected in schedule[${i}]`) }
-      else if (!(schedule[i] as Post ).holiday) { schedule[i] = { ...toSchedule, postDate: { ...schedule[i].postDate } }}
-      else if (i === (schedule[i] as Post).postBy) { /** Do nothing, this is the exact holiday date */ }
+      else if (!(schedule[i] as Itinerary ).holiday) { schedule[i] = { ...toSchedule, postDate: { ...schedule[i].postDate } }}
+      else if (i === (schedule[i] as Itinerary).postBy) { /** Do nothing, this is the exact holiday date */ }
       else {
-        if ((schedule[i] as Post).holiday !== c.r1.holiday && (schedule[i] as Post).holiday !== c.r2.holiday) { count++ } 
-        conflict.push({ index: i, r1: schedule[i] as Post, r2: toSchedule, bias: _bias*count })
+        if ((schedule[i] as Itinerary).holiday !== c.r1.holiday && (schedule[i] as Itinerary).holiday !== c.r2.holiday) { count++ } 
+        conflict.push({ index: i, r1: schedule[i] as Itinerary, r2: toSchedule, bias: _bias*count })
         count++
       }
       i--
@@ -361,7 +267,7 @@ const generateSchedule = (
 
 const createDrillDownTabs = async (
   auth: any, dds: { 
-    posts: (Post|EmptyPost)[], platform: "FaceBook" | "Instagram" 
+    posts: (Itinerary|EmptyItinerary)[], platform: "FaceBook" | "Instagram" 
   }[]
 ): Promise<{ statusCode: number, body: string }> => {
   const len = dds[0].posts.length
@@ -448,27 +354,20 @@ const createDrillDownTabs = async (
       values = [ _headersDrillDown ]
     } else {
       for (let j=0; j<dds.length; j++) {
-        // If not an EmptyPost -- add to sheet
-        if ((dds[j].posts[i] as Post).holiday) {
+        // If not an EmptyItinerary -- add to sheet
+        if ((dds[j].posts[i] as Itinerary).holiday) {
           const r = {
             year:     dds[j].posts[i].postDate.year,
             month:    dds[j].posts[i].postDate.month,
             day:      dds[j].posts[i].postDate.day,
             hour:     dds[j].posts[i].postDate.hour,
             min:      dds[j].posts[i].postDate.minute,
-            row:     (dds[j].posts[i] as Post).row,
-            platform: dds[j].platform
-          }
+            row:     (dds[j].posts[i] as Itinerary).row,
+            platform: dds[j].platform,
+            holiday: (dds[j].posts[i] as Itinerary).holiday
+          } as { [k: HeadersDrillDown]: string | number }
 
-          const row = [ r.year, r.month, r.day, r.hour, r.min, r.row, r.platform ]
-          // batchUpdateParams.requestBody!.requests!.push({
-          //   updateCells: { fields: "*", rows: [{
-          //     values: row.map( r => { 
-          //       if (typeof r === "number") return { userEnteredValue: { numberValue: r } } as sheets_v4.Schema$CellData
-          //       else return { userEnteredValue: { stringValue: r.toString() } } as sheets_v4.Schema$CellData
-          //     })
-          //   }] }
-          // })
+          const row = [ r.year, r.month, r.day, r.hour, r.min, r.row, r.platform, r.holiday ]
           values.push(row)
         }
       }
@@ -480,16 +379,4 @@ const createDrillDownTabs = async (
 
 
 
-// Open AI
-// const configuration = new Configuration({
-//   organization: secret.openai.organization,
-//   apiKey: secret.openai.apiKey,
-// })
 
-// const openai = new OpenAIApi(configuration)
-// const response = await openai.listModels()
-// console.log(response)
-
-// for (const m of response.data.data) {
-//   console.log(m.id)
-// }
