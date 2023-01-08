@@ -79,3 +79,5 @@ chromium
 chromiumci
 
 tmp
+
+secret.ts
