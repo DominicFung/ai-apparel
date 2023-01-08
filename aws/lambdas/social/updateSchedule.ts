@@ -71,30 +71,43 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
         for (const {r, i} of t.rowData!.map((r, i) => ({r, i}))) { 
           if (i === 0) { continue /** skip first row */ }
           else {
-            const a = r.values![drilldownHeaders["row"]].effectiveValue?.numberValue
+            console.log("getting Row ...")
+            const a = r.values![drilldownHeaders["Row"]]?.effectiveValue?.numberValue
+            console.log(a)
             if (!a) { console.warn(`"${tabName}" did not have a column for row: a = ${i}`); return { statusCode: 400, body: ``} }
 
-            const holiday1 = grid.rowData![a].values![headers["holidy"]].effectiveValue?.stringValue
-            const holiday2 = r.values![drilldownHeaders["holiday"]].effectiveValue?.stringValue
+            console.log("getting Holidays ...")
+            const holiday1 = grid.rowData![a].values![headers["Holidy"]]?.effectiveValue?.stringValue
+            console.log(`holiday1 OK: ${holiday1}`)
+            const holiday2 = r.values![drilldownHeaders["Holiday"]]?.effectiveValue?.stringValue
+            console.log(`holiday2 OK: ${holiday2}`)
 
             if (!( holiday1 && holiday2 && holiday1 === holiday2 )) {
               console.warn(`"Holidy" between Master sheet: "${_masterSheetTitle}" and "${tabName}" are different. 
                 They are "${holiday1}" and "${holiday2}" respectively. Skipping.`); continue
             }
 
-            let ex = {} as {[k: Prompt]: string[]}
+            let include = {} as {[k: Prompt]: string[]}
             for (const k of _promptChoices) {
               let columnName = capitialize(k)
-              let data = grid.rowData![a].values![drilldownHeaders[columnName]].effectiveValue?.stringValue?.split(",")
-              if (data) ex[k] = data.map( v => v.trim())
-              else { console.warn(`"${tabName}", row: ${i}, column: "${columnName}" is empty. Could be intentional.`) }
+              console.log(`column name: ${columnName}`)
+
+              let rawdata = grid.rowData![a].values![headers[columnName]]
+              console.log(rawdata)
+
+              if (rawdata) {
+                let data = rawdata.effectiveValue?.stringValue
+                if (data) include[k] = data.split(",").map( v => v.trim())
+                else { console.warn(`"${tabName}", row: ${i}, column: "${columnName}" is empty. Could be intentional.`) }
+              }
             }
             
-            const p: { prompt: string, choice: { [k: Prompt]: string } } = generatePrompt(ex)
-            console.log(`PROMPT: ${p}`)
+            console.log(`include: ${include}`)
+            const p: { prompt: string, choice: { [k: Prompt]: string } } = generatePrompt(include)
+            console.log(`PROMPT: ${JSON.stringify(p, null, 2)}`)
 
             const joke = getJoke(secret, { subject: p.choice.subject, holiday: holiday1 })
-            console.log(`JOKE: ${joke}`)
+            console.log(`JOKE: ${JSON.stringify(joke, null, 2)}`)
 
             let post = { postId: uuidv4()} as {[k: HeadersDrillDown|string]: any}
             for (const k of _headersDrillDown) {

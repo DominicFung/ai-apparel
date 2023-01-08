@@ -51,7 +51,7 @@ export interface EmptyItinerary {
 export interface Itinerary extends EmptyItinerary, PostRequirment { }
 
 export const getSheetTab = async (
-  auth: any, options?: {
+  auth: any, options: {
     tabName: string, lastRow: number, lastColumn: string, 
   }
 ): Promise<sheets_v4.Schema$Sheet|null> => {
@@ -62,12 +62,13 @@ export const getSheetTab = async (
     spreadsheetId: _spreadsheet,
     includeGridData: true
   } as sheets_v4.Params$Resource$Spreadsheets$Get
-  if (options) { params.ranges = [ `${options.tabName}!A1:${options.lastColumn}${options.lastRow}` ] } 
+  
+  params.ranges = [ `${options.tabName}!A1:${options.lastColumn}${options.lastRow}` ]
   const oursheet = await client.spreadsheets.get(params)
   const tabs = oursheet.data.sheets
   if (tabs && tabs.length > 0) {
     for (const t of tabs) {
-      if (t.properties?.title === _masterSheetTitle) { return t } 
+      if (t.properties?.title === options.tabName) { return t } 
     }
   }
 

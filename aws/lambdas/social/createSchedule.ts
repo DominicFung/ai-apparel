@@ -74,6 +74,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
 
       // First pass is about indexing rows and storing them into memory.
       let mem = { year: b.year, month: b.month, day: 0, count: 0 } as { year: number, month: Month, day: number, count: number }
+      console.log(`START MEM: ${JSON.stringify(mem, null, 2)}`)
 
       const grid = masterTab.data![0] // should only be one, since we always submit only 1 range
       if (!grid) { return { statusCode: 500, body: `Tab ${_masterSheetTitle} range could not be found` } }
@@ -144,12 +145,12 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
       }
 
       console.log(`=== Facebook Schedule === `)
-      const schedule1 = generateSchedule({year: b.year, month: _months.indexOf(b.month), day: 0}, mem.count, fb)
+      const schedule1 = generateSchedule({year: b.year, month: _months.indexOf(b.month), day: 1}, mem.count, fb)
       console.log(`=== Facebook Schedule === `)
       console.log(schedule1)
 
       console.log(`=== Instagram Schedule === `)
-      const schedule2 = generateSchedule({year: b.year, month: _months.indexOf(b.month), day: 0}, mem.count, insta)
+      const schedule2 = generateSchedule({year: b.year, month: _months.indexOf(b.month), day: 1}, mem.count, insta)
       console.log(`=== Instagram Schedule === `)
       console.log(schedule2)
 
@@ -168,8 +169,14 @@ const getPrimeTimesPerWeekDayDiff = (
   s: { year: number, month: number, day: number }, 
   e: { year: number, month: number, day: number }, 
 ): number => {
+  console.log(`start: ${JSON.stringify(s)}, end: ${JSON.stringify(e)}`)
+
   let start = new Date(s.year, s.month, s.day)
   let end = new Date(e.year, e.month, e.day)
+
+  // solve off by one issue
+  start.setDate(start.getDate() + 1)
+  //end.setDate(end.getDate())
 
   const startDay = start.getDay()
   let days = {} as { [ d in DaysOfTheWeek ]: number }
@@ -177,13 +184,14 @@ const getPrimeTimesPerWeekDayDiff = (
 
   let count = 0
   let currentDay = startDay
-  while (start < end) {
+  while (start <= end) {
     days[_daysOfTheWeek[currentDay]] = days[_daysOfTheWeek[currentDay]] + primeTime[_daysOfTheWeek[currentDay]].length
     count = count + primeTime[_daysOfTheWeek[currentDay]].length
     
     currentDay = (currentDay + 1) % 7
     start.setDate(start.getDate() + 1)
   }
+  console.log(count)
   return count
 }
 
@@ -293,33 +301,12 @@ const createDrillDownTabs = async (
     if (t.properties?.title && t.properties?.sheetId) tabsInventory[t.properties.title] = t.properties.sheetId
   }
 
-  // let batchUpdateParams = {
-  //   spreadsheetId: _spreadsheet,
-  //   requestBody: {
-  //     requests: [{
-  //       addSheet: { properties: { title: sheetTitle } },
-  //       updateCells: { fields: "*", rows: [{ 
-  //         values: _headersDrillDown.map( h => { return { userEnteredValue: { stringValue: h } } as sheets_v4.Schema$CellData })
-  //       }] }
-  //     }]
-  //   }
-  // } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate
-
   let values = [ _headersDrillDown ] as (string|number)[][]
 
   for (let i=0; i<len; i++) {
     const sheetTitle = `${currentMonth}${currentYear}`
     if ( currentYear !== dds[0].posts[i].postDate.year || currentMonth !== dds[0].posts[i].postDate.month) {
       if (tabsInventory[sheetTitle]) {
-        // const deleteSheetParams = {
-        //   spreadsheetId: _spreadsheet, 
-        //   requestBody: {
-        //     requests: [{ deleteSheet: tabsInventory[sheetTitle] }]
-        //   }
-        // } as sheets_v4.Params$Resource$Spreadsheets$Batchupdate
-        
-        // console.log(`Deleting Sheet ${sheetTitle} with ID: ${tabsInventory[sheetTitle]}`)
-        // console.log( await client.spreadsheets.batchUpdate(deleteSheetParams) )
         console.log(`No need to delete ${sheetTitle} for now,`)
       } else {
         await client.spreadsheets.batchUpdate({
@@ -343,14 +330,6 @@ const createDrillDownTabs = async (
 
       /** Reset currentMonth / currentYear */
       currentMonth = dds[0].posts[i].postDate.month, currentYear = dds[0].posts[i].postDate.year 
-
-      /** Reset batchUpdateParams */
-      // batchUpdateParams.requestBody!.requests! = [{
-      //   addSheet: { properties: { title: sheetTitle } },
-      //   updateCells: { fields: "*", rows: [{ 
-      //     values: _headersDrillDown.map( h => { return { userEnteredValue: { stringValue: h } } as sheets_v4.Schema$CellData })
-      //   }] }
-      // }]
       values = [ _headersDrillDown ]
     } else {
       for (let j=0; j<dds.length; j++) {
