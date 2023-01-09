@@ -17,6 +17,8 @@ export class ApiGatewayStack extends Stack {
     super(app, id)
 
     const socialDynamoName = Fn.importValue(`${props.name}-socialTableName`)
+    const socialDynamoArn = Fn.importValue(`${props.name}-socialTableArn`)
+    const ttlKey = Fn.importValue(`${props.name}-socialTableTTL`)
 
     const excRole = new Role(this, `${props.name}-SocialMediaLambdaRole`, {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com')
@@ -38,6 +40,10 @@ export class ApiGatewayStack extends Stack {
               "secretsmanager:ListSecrets"
             ],
             resources: ["*"]
+          }),
+          new PolicyStatement({
+            actions: [ "dynamodb:*" ],
+            resources: [ `${socialDynamoArn}*` ]
           })
         ]
       })
@@ -48,7 +54,8 @@ export class ApiGatewayStack extends Stack {
       bundling: { externalModules: ['aws-sdk'] },
       depsLockFilePath: join(__dirname, '../lambdas', 'package-lock.json'),
       environment: {
-        TABLE_NAME: socialDynamoName
+        TABLE_NAME: socialDynamoName,
+        TTL_KEY: ttlKey
       },
       runtime: Runtime.NODEJS_16_X,
     }

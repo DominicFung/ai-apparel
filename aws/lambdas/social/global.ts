@@ -26,8 +26,9 @@ export type Month = typeof _months[number]
 
 export const _alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 export const _headersDrillDown = [
-  "Year", "Month", "Day", "Hour", "Min", "Row", "Platform", "Holiday", 
-  "Prompt", "Joke", "Image1", "Image2", "Image3"
+  "SocialId", "Year", "Month", "Day", "Hour", "Min", "Row", "Platform", "Holiday", 
+  "Prompt", "Joke", "Image1", "Image2", "Image3",
+  "Vibe", "Format", "Subject", "Perspective", "Artist", "Style", "Booster"
 ]
 export type HeadersDrillDown = typeof _headersDrillDown[number]
 

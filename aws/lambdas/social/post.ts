@@ -5,8 +5,9 @@ import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-sec
 export const handler = async (event: any): Promise<{statusCode: number, body: string}> => {
   console.log(event)
 
-  if (!event.body)        return { statusCode: 400, body: "bad request" }
-  const body = JSON.parse(event.body) as { id: string }
+  // if (!event.socialId)  return { statusCode: 400, body: "bad request" }
+  // if (!event.message)   return { statusCode: 400, body: "bad request" }
+  // if (!event.imageUrl)  return { statusCode: 400, body: "bad request" }
 
   const smc = new SecretsManagerClient({})
   const command = new GetSecretValueCommand({
@@ -33,15 +34,19 @@ const getPageAccessToken = async (appId: string, appSecret: string): Promise<str
   );
   const appTokenJson = await appTokenResponse.json();
   const appAccessToken = (appTokenJson as any).access_token;
+  console.log(appAccessToken)
 
   // Get the page access token
   const pageTokenResponse = await fetch(
-    `https://graph.facebook.com/v7.0/me/accounts?access_token=${appAccessToken}`
+    `https://graph.facebook.com/v15.0/460014319491088/accounts?access_token=${appAccessToken}`
   );
-  const pageTokenJson = await pageTokenResponse.json();
-  const pageAccessToken = (pageTokenJson as any).data[0].access_token;
+  const pageTokenJson = await pageTokenResponse.json()
+  console.log(pageTokenJson)
 
-  return pageAccessToken;
+  const pageAccessToken = (pageTokenJson as any).data[0].access_token
+  console.log(pageAccessToken)
+
+  return pageAccessToken
 }
 
 
@@ -73,10 +78,11 @@ const postToFacebookPage = async (pageAccessToken: string, message: string, imag
   };
 
   // Send the GraphQL query to the GraphQL endpoint
-  const response = await fetch('https://graph.facebook.com/v7.0/100088965992234/feed?', {
+  // https://developers.facebook.com/docs/pages/publishing/#publish-a-photo
+  const response = await fetch(`https://graph.facebook.com/v15.0/100089036812722/photos?url=${imageUrl}&access_token=${pageAccessToken}`, {
     method: 'POST',
     headers: headers,
-    body: JSON.stringify(body),
+    //body: JSON.stringify(body),
   });
 
   // Return the response

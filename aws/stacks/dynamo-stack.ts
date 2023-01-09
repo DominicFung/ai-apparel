@@ -170,6 +170,10 @@ export class DynamoStack extends Stack {
               "secretsmanager:ListSecrets"
             ],
             resources: ["*"]
+          }),
+          new PolicyStatement({
+            actions: [ "dynamodb:*" ],
+            resources: [ `${socialTable.tableArn}*` ]
           })
         ]
       })
