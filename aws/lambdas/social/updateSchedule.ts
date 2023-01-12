@@ -4,6 +4,8 @@ import { auth, sheets } from '@googleapis/sheets'
 import { v4 as uuidv4 } from 'uuid'
 
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager"
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda'
+import { fromUtf8 } from '@aws-sdk/util-utf8-node'
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb'
 import { marshall } from '@aws-sdk/util-dynamodb'
 
@@ -11,6 +13,7 @@ import { generatePrompt, getSheetTab, head, HeadersDrillDown, Month, Prompt, _al
 
 const TABLE_NAME = process.env.TABLE_NAME || ''
 const TTL_KEY = process.env.TTL_KEY || ''
+const IMAGE_FUNCTION_NAME = process.env.IMAGE_FUNCTION_NAME || ''
 
 /**
  * Main processor for a single "<Month><Year>" page.
@@ -38,6 +41,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
   
   console.log(`TABLE_NAME ${TABLE_NAME}`)
   const dynamo = new DynamoDBClient({})
+  const lambda = new LambdaClient({})
 
   const smc = new SecretsManagerClient({})
   const command = new GetSecretValueCommand({
@@ -154,6 +158,13 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
             dynamoPost.joke = post.Joke
 
             console.log(`post: ${JSON.stringify(dynamoPost, null, 2)}`)
+            lambda.send(new InvokeCommand({
+              FunctionName: IMAGE_FUNCTION_NAME,
+              Payload: fromUtf8(JSON.stringify({
+                socialId: post.SocialId,
+                prompt: post.Prompt
+              }))
+            }))
 
             let v = Array(_headersDrillDown.length).fill("")
             for (const h of Object.keys(post)) {
@@ -231,3 +242,4 @@ const capitialize = (string: string) => {
 const lowercase = (string: string) => {
   return string.charAt(0).toLowerCase() + string.slice(1);
 }
+

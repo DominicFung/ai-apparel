@@ -1,6 +1,7 @@
 import { GeoData } from "./geodata"
 
 export interface CustomerRequest {
+  admin?: string, 
   ip: string
 }
 

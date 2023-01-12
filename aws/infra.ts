@@ -8,6 +8,7 @@ import { SNSStack } from './stacks/sns-stack'
 import { ApiGatewayStack } from './stacks/apigateway-stack'
 
 const PROJECT_NAME = 'AIApparel'
+const DOMAIN = "https://aiapparelstore.com"
 const app = new App()
 
 let s3Stack = new S3Stack(app, `${PROJECT_NAME}-S3Stack`, {
@@ -39,7 +40,8 @@ new SNSStack(app, `${PROJECT_NAME}-SNSStack`, {
 
 let gatewayStack = new ApiGatewayStack(app, `${PROJECT_NAME}-APIGatewayStack`, {
   name: PROJECT_NAME,
-  restAPIName: "ai-apparel-social"
+  restAPIName: "ai-apparel-social",
+  hostName: DOMAIN
 })
 gatewayStack.addDependency(dynamoStack)
 
