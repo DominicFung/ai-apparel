@@ -15,7 +15,6 @@ import { marshall } from '@aws-sdk/util-dynamodb'
 import { GetObjectCommand, S3Client, S3ClientConfig } from '@aws-sdk/client-s3'
 import { Conversion } from '../../../utils/utils'
 
-
 export default async function handler(req: NextApiRequest,res: NextApiResponse<CustomerResponse>) {
   const token = req.cookies.token
   const b = JSON.parse(req.body) as CustomerRequest
@@ -71,10 +70,16 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
     
     if (b.ip) {
       console.log(b.ip)
-      let geo = await got.get(`https://api.ipgeolocation.io/ipgeo?apiKey=${secret.ipgeolocation.token}&ip=${b.ip}`).json() as GeoData
+
+      let geo = {} as GeoData
+      let customerId = uuidv4()
+      if (b.admin && b.admin === secret.secret) {
+        customerId = "ADMIN"
+      } else {
+        geo = await got.get(`https://api.ipgeolocation.io/ipgeo?apiKey=${secret.ipgeolocation.token}&ip=${b.ip}`).json() as GeoData
+      }
       const customer = {
-        customerId: uuidv4(),
-        ip: b.ip, geo,
+        customerId, ip: b.ip, geo,
         lastAccess: Date.now()
       } as Customer
   

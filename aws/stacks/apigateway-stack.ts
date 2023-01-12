@@ -10,6 +10,7 @@ import { join } from 'path'
 interface ApiGatewayProps {
   name: string,
   restAPIName: string
+  hostName: string
 }
 
 export class ApiGatewayStack extends Stack {
@@ -17,6 +18,8 @@ export class ApiGatewayStack extends Stack {
     super(app, id)
 
     const socialDynamoName = Fn.importValue(`${props.name}-socialTableName`)
+    const socialDynamoArn = Fn.importValue(`${props.name}-socialTableArn`)
+    const ttlKey = Fn.importValue(`${props.name}-socialTableTTL`)
 
     const excRole = new Role(this, `${props.name}-SocialMediaLambdaRole`, {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com')
@@ -38,6 +41,10 @@ export class ApiGatewayStack extends Stack {
               "secretsmanager:ListSecrets"
             ],
             resources: ["*"]
+          }),
+          new PolicyStatement({
+            actions: [ "dynamodb:*" ],
+            resources: [ `${socialDynamoArn}*` ]
           })
         ]
       })
@@ -48,7 +55,9 @@ export class ApiGatewayStack extends Stack {
       bundling: { externalModules: ['aws-sdk'] },
       depsLockFilePath: join(__dirname, '../lambdas', 'package-lock.json'),
       environment: {
-        TABLE_NAME: socialDynamoName
+        TABLE_NAME: socialDynamoName,
+        TTL_KEY: ttlKey,
+        HOST: props.hostName
       },
       runtime: Runtime.NODEJS_16_X,
     }
@@ -60,8 +69,16 @@ export class ApiGatewayStack extends Stack {
       ...nodeJsFunctionProps
     })
 
-    const updateSchedule = new NodejsFunction(this, `${props.name}-SchedulePosts`, {
+    const updateSchedule = new NodejsFunction(this, `${props.name}-UpdateSchedule`, {
       entry: join(__dirname, '../lambdas', 'social', 'updateSchedule.ts'),
+      memorySize: 10240,
+      timeout: Duration.minutes(15),
+      ...nodeJsFunctionProps
+    })
+
+    // called by update schedule programatically
+    new NodejsFunction(this, `${props.name}-RequestImages`, {
+      entry: join(__dirname, '../lambdas', 'social', 'requestImages.ts'),
       memorySize: 10240,
       timeout: Duration.minutes(15),
       ...nodeJsFunctionProps

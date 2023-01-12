@@ -346,7 +346,7 @@ const createDrillDownTabs = async (
             holiday: (dds[j].posts[i] as Itinerary).holiday
           } as { [k: HeadersDrillDown]: string | number }
 
-          const row = [ r.year, r.month, r.day, r.hour, r.min, r.row, r.platform, r.holiday ]
+          const row = [ "", r.year, r.month, r.day, r.hour, r.min, r.row, r.platform, r.holiday ]
           values.push(row)
         }
       }
