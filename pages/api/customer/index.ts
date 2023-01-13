@@ -16,16 +16,22 @@ import { GetObjectCommand, S3Client, S3ClientConfig } from '@aws-sdk/client-s3'
 import { Conversion } from '../../../utils/utils'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<CustomerResponse>) {
+  //if (!req.body) { console.error("/api/customer - body is empty"); return }
   const token = req.cookies.token
-
-  console.log(req.body)
+  console.log(`BODY: ${req.body}`)
+  console.log(`closed? ${req.closed}`)
+  console.log(`complete? ${req.complete}`)
+  console.log(req.headers)
+  
   let b = req.body as CustomerRequest
   if (typeof b === "string") { 
     console.log("req.body is a string")
-    console.log(b)
     console.log(req)
+
+    if (!b) { console.error(`req.body is empty: ${b}`); return }
     b = JSON.parse(b) as CustomerRequest 
   }
+
   
   console.log(b)
   console.log(token)
