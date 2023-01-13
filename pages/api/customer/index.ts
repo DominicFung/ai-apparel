@@ -17,7 +17,10 @@ import { Conversion } from '../../../utils/utils'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<CustomerResponse>) {
   const token = req.cookies.token
-  const b = JSON.parse(req.body) as CustomerRequest
+
+  let b = req.body as CustomerRequest
+  if (typeof b === "string") b = JSON.parse(b) as CustomerRequest
+  
   console.log(b)
   console.log(token)
   if (!token && !b.ip) { res.status(401); return }
@@ -71,7 +74,10 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
     if (b.ip) {
       console.log(b.ip)
 
-      let geo = {} as GeoData
+      let geo = {
+        currency: { code: "CAN", symbol: "$" }
+      } as GeoData
+
       let customerId = uuidv4()
       if (b.admin && b.admin === secret.secret) {
         customerId = "ADMIN"
