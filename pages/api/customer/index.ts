@@ -18,8 +18,12 @@ import { Conversion } from '../../../utils/utils'
 export default async function handler(req: NextApiRequest,res: NextApiResponse<CustomerResponse>) {
   const token = req.cookies.token
 
+  console.log(req.body)
   let b = req.body as CustomerRequest
-  if (typeof b === "string") b = JSON.parse(b) as CustomerRequest
+  if (typeof b === "string") { 
+    console.log("req.body is a string")
+    b = JSON.parse(b) as CustomerRequest 
+  }
   
   console.log(b)
   console.log(token)
