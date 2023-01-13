@@ -17,6 +17,7 @@
     "@aws-sdk/util-utf8-node": "^3.208.0",
     "@googleapis/sheets": "^4.0.1",
     "aws-sdk": "^2.1197.0",
+    "axios": "^1.2.2",
     "install": "^0.13.0",
     "moment": "^2.29.4",
     "node-fetch": "^3.2.10",

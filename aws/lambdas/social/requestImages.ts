@@ -1,4 +1,4 @@
-import fetch from 'node-fetch'
+import axios from 'axios'
 
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager"
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb'
@@ -37,34 +37,36 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
 
   if (rawsecret) {
     const secret = JSON.parse(rawsecret) as any
-    const rraw = await fetch(HOSTAPI+"/api/customer", {
-      method: "POST",
-      body: JSON.stringify({ ip: "0.0.0.0", admin: secret.secret } as CustomerRequest)
+    const data = JSON.stringify({ ip: "0.0.0.0", admin: secret.secret } as CustomerRequest)
+    
+    console.log(data)
+    const rraw = await axios({ url: HOSTAPI+"/api/customer",
+      method: "post", data, headers: { "Content-Type": "application/json" }
     })
 
     console.log(rraw)
-    const res0 = await (rraw).json() as CustomerResponse
+    const res0 = rraw.data as CustomerResponse
     console.log(res0)
 
-    const headers = { cookie: res0.token }
+    const headers = { cookie: `token=${res0.token}`, "Content-Type": "application/json" }
     console.log(JSON.stringify(headers, null, 2))
     
     // Generate new image
-    const res1 = await (await fetch(HOSTAPI+"/api/replicate/stablediffusion/generate", {
-      method: "POST", headers, body: JSON.stringify({ num_executions: 1, prompt: event.prompt })
-    })).json() as ReplicateStableDiffusionResponse[]
+    const res1 = (await axios(HOSTAPI+"/api/replicate/stablediffusion/generate", {
+      method: "POST", headers, data: JSON.stringify({ num_executions: 1, prompt: event.prompt })
+    })).data as ReplicateStableDiffusionResponse[]
     let temp = {id: res1[0].id, status: 'PROCESSING'} as AIImageResponse
     const itemId = temp.id
 
-    const res2 = await (await fetch(HOSTAPI+"/api/products", { headers })).json() as Product[]
+    const res2 = (await axios(HOSTAPI+"/api/products", { headers })).data as Product[]
     const i1 = Math.floor(Math.random()*res2.length)
 
     const productId = res2[i1].productId
     const printprovider = res2[i1].printprovider
 
-    const res3 = await ( await fetch(HOSTAPI+'/api/printify/variants', {
-      method: "POST", headers, body: JSON.stringify({ blueprintId: productId, printprovider })
-    })).json() as VariantResponse
+    const res3 = (await axios(HOSTAPI+'/api/printify/variants', {
+      method: "POST", headers, data: JSON.stringify({ blueprintId: productId, printprovider })
+    })).data as VariantResponse
 
     const i2 = Math.floor(Math.random()*res3.locationVariant.length)
     const variantId = res3.locationVariant[i2].id
@@ -74,7 +76,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     // wait for loading to complete
     for (let i=0; i<10; i++) {
       await wait(_WAIT_SEC)
-      const res4 = await (await fetch(HOSTAPI+`/api/replicate/stablediffusion/${temp.id}`, { headers })).json() as AIImageResponse
+      const res4 = (await axios(HOSTAPI+`/api/replicate/stablediffusion/${temp.id}`, { headers })).data as AIImageResponse
       if (res4.status === "ERROR") return { statusCode: 500, body: "Image Processing Error" }
       if (res4.status === "COMPLETE") { temp = res4; break }
     }
@@ -82,21 +84,21 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     if (temp.url) {
       const g = generateRandomUniqueIntegers(_NUM_IMAGES, res3.locationVariant.length)
 
-      const res5 = await (await fetch(`${HOSTAPI}/api/printify/mockup/upload`, {
+      const res5 = (await axios(`${HOSTAPI}/api/printify/mockup/upload`, {
         method: "POST",
-        body: JSON.stringify({ 
+        data: JSON.stringify({ 
           itemId, productId, providerId: printprovider.toString()
         } as MockUploadToPrintifyRequest)
-      })).json() as MockUploadToPrintifyResponse
+      })).data as MockUploadToPrintifyResponse
       
       let exString = "set "
       let exAttribute = {} as {[k:string]: { S: string } }
       let values = [] as string[]
 
       for (const {i, j} of g.map((i, j) => ({i, j}))) {
-        const res6 = await (await fetch(HOSTAPI+`/api/printify/mockup/${itemId}`, {
+        const res6 = (await axios(HOSTAPI+`/api/printify/mockup/${itemId}`, {
           method: 'POST',
-          body: JSON.stringify({
+          data: JSON.stringify({
             blueprintId: Number(productId),
             printProviderId: printprovider,
             variantId: variantId,
@@ -105,7 +107,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
             images: res5.images,
             baseColorHex: colorName
           } as PrintifyMockRequest)
-        })).json() as PrintifyMockResponse
+        })).data as PrintifyMockResponse
 
         // Write Images to array
         exString = `${exString} image${j} = :image${j}`
