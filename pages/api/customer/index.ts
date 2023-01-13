@@ -22,6 +22,8 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
   let b = req.body as CustomerRequest
   if (typeof b === "string") { 
     console.log("req.body is a string")
+    console.log(b)
+    console.log(req)
     b = JSON.parse(b) as CustomerRequest 
   }
   
