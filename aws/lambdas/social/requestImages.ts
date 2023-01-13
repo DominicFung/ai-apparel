@@ -9,6 +9,7 @@ import manualColors from '../../../color.json'
 import { AIImageResponse, ReplicateStableDiffusionResponse } from '../../../types/replicate'
 import { Product } from '../../../types/product'
 import { MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyMockRequest, PrintifyMockResponse, VariantResponse } from '../../../types/printify'
+import { CustomerRequest, CustomerResponse } from '../../../types/customer'
 import { getSheetTab, head, _alphabet, _headersDrillDown, _spreadsheet } from './global'
 import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 
@@ -36,17 +37,21 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
 
   if (rawsecret) {
     const secret = JSON.parse(rawsecret) as any
-    const res0 = await (await fetch(HOSTAPI+"customer", {
+    const rraw = await fetch(HOSTAPI+"/api/customer", {
       method: "POST",
-      body: { ip: "0.0.0.0", admin: secret.secret }
-    })).json() as { token: string }
+      body: JSON.stringify({ ip: "0.0.0.0", admin: secret.secret } as CustomerRequest)
+    })
+
+    console.log(rraw)
+    const res0 = await (rraw).json() as CustomerResponse
+    console.log(res0)
 
     const headers = { cookie: res0.token }
     console.log(JSON.stringify(headers, null, 2))
     
     // Generate new image
     const res1 = await (await fetch(HOSTAPI+"/api/replicate/stablediffusion/generate", {
-      method: "POST", headers, body: { num_executions: 1, prompt: event.prompt }
+      method: "POST", headers, body: JSON.stringify({ num_executions: 1, prompt: event.prompt })
     })).json() as ReplicateStableDiffusionResponse[]
     let temp = {id: res1[0].id, status: 'PROCESSING'} as AIImageResponse
     const itemId = temp.id
@@ -58,7 +63,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     const printprovider = res2[i1].printprovider
 
     const res3 = await ( await fetch(HOSTAPI+'/api/printify/variants', {
-      method: "POST", headers, body: { blueprintId: productId, printprovider }
+      method: "POST", headers, body: JSON.stringify({ blueprintId: productId, printprovider })
     })).json() as VariantResponse
 
     const i2 = Math.floor(Math.random()*res3.locationVariant.length)
@@ -69,9 +74,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     // wait for loading to complete
     for (let i=0; i<10; i++) {
       await wait(_WAIT_SEC)
-      const res4 = await (await fetch(HOSTAPI+`/api/replicate/stablediffusion/${temp.id}`, {
-        method: "POST", headers
-      })).json() as AIImageResponse
+      const res4 = await (await fetch(HOSTAPI+`/api/replicate/stablediffusion/${temp.id}`, { headers })).json() as AIImageResponse
       if (res4.status === "ERROR") return { statusCode: 500, body: "Image Processing Error" }
       if (res4.status === "COMPLETE") { temp = res4; break }
     }
