@@ -23,7 +23,9 @@ path.resolve(process.cwd(), 'fonts', 'Quicksand-VariableFont_wght.ttf');
 
 // https://images.printify.com/storage/anonymous
 export default async function handler(req: NextApiRequest, res: NextApiResponse<MockUploadToPrintifyResponse>) {
-  const b = JSON.parse(req.body) as MockUploadToPrintifyRequest
+  console.log(req.body)
+  let b = req.body as MockUploadToPrintifyRequest
+  if (typeof b === "string") b = JSON.parse(req.body) as MockUploadToPrintifyRequest
 
   let config = {} as DynamoDBClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
