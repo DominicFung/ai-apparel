@@ -11,8 +11,9 @@ import { isBright } from '../../../../utils/utils'
 
 export default async function handler(req: NextApiRequest,res: NextApiResponse<PrintifyMockResponse>) {
   const { itemId } = req.query
-  const b = JSON.parse(req.body) as PrintifyMockRequest
-  //console.log(JSON.stringify(b.images, null, 2))
+
+  let b = req.body as PrintifyMockRequest
+  if (typeof b === "string") b = JSON.parse(req.body) as PrintifyMockRequest
 
   let s3Config = {} as S3ClientConfig
   if (process.env.AWS_PROFILE) { config["credentials"] = fromIni({ profile: process.env.AWS_PROFILE }) }
