@@ -2,6 +2,7 @@ import axios from 'axios'
 
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager"
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb'
+import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3'
 
 import namedColors from 'color-name-list'
 import manualColors from '../../../color.json'
@@ -10,15 +11,17 @@ import { AIImageResponse, GenerateAIImageRequest, ReplicateStableDiffusionRespon
 import { Product } from '../../../types/product'
 import { MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyMockRequest, PrintifyMockResponse, VariantResponse } from '../../../types/printify'
 import { CustomerRequest, CustomerResponse } from '../../../types/customer'
+
 import { getSheetTab, head, _alphabet, _headersDrillDown, _spreadsheet } from './global'
 import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 
 
-
 const TABLE_NAME = process.env.TABLE_NAME || ''
-const HOSTAPI = process.env.HOST || "https://www.aiapparelstore.com"
+const BUCKET_NAME = process.env.BUCKET_NAME || ''
+const HOSTAPI = process.env.HOST || ''
 
-const _WAIT_SEC = 5000
+
+const _WAIT_SEC = 7500
 const _NUM_IMAGES = 3
 
 export const handler = async (event: any): Promise<{statusCode: number, body: string}> => {
@@ -34,6 +37,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
   const rawsecret = (await smc.send(command)).SecretString
 
   const dynamo = new DynamoDBClient({})
+  const s3 = new S3Client({})
 
   if (rawsecret) {
     const secret = JSON.parse(rawsecret) as any
@@ -78,7 +82,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     for (let i=0; i<10; i++) {
       console.log(`Waiting ... ${i}`)
       await wait(_WAIT_SEC)
-      const res4 = (await axios(HOSTAPI+`/api/replicate/stablediffusion/${temp.id}`, { headers })).data as AIImageResponse
+      const res4 = (await axios(HOSTAPI+`/api/replicate/stablediffusion/${itemId}`, { headers })).data as AIImageResponse
       if (res4.status === "ERROR") return { statusCode: 500, body: "Image Processing Error" }
       if (res4.status === "COMPLETE") { temp = res4; break }
     }
@@ -87,6 +91,28 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
 
     if (temp.url) {
       const g = generateRandomUniqueIntegers(_NUM_IMAGES, res3.locationVariant.length)
+
+      // Save again
+      // console.log("Ensure proper S3 Save. Please wait ..")
+      // await wait(_WAIT_SEC*3)
+      // console.log(
+      //   (await axios(HOSTAPI+`/api/replicate/stablediffusion/${itemId}`, { headers })).data as AIImageResponse
+      // )
+
+      const _MAX = 30
+      for (let k = 0; k < _MAX; k++) {
+        await wait(_WAIT_SEC)
+        try {
+          const command0 = new HeadObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: `public/stablediffusion/${itemId}/original.jpg`
+          })
+          await s3.send(command0)
+          break // hitting this line means the file exists
+        } catch { console.log(`Waiting for AI generated image ... ${k}`) }
+
+        if (k === _MAX-1) return { statusCode: 500, body: `Unable to wait for public/stablediffusion/${itemId}/original.jpg to upload.` }
+      }
 
       const res5 = (await axios(`${HOSTAPI}/api/printify/mockup/upload`, {
         method: "POST", headers,

@@ -9,6 +9,7 @@ import { join } from 'path'
 
 interface ApiGatewayProps {
   name: string,
+  bucketName: string
   restAPIName: string
   hostName: string
 }
@@ -20,6 +21,8 @@ export class ApiGatewayStack extends Stack {
     const socialDynamoName = Fn.importValue(`${props.name}-socialTableName`)
     const socialDynamoArn = Fn.importValue(`${props.name}-socialTableArn`)
     const ttlKey = Fn.importValue(`${props.name}-socialTableTTL`)
+
+    const bucketName = Fn.importValue(`${props.bucketName}-bucketName`)
 
     const excRole = new Role(this, `${props.name}-SocialMediaLambdaRole`, {
       assumedBy: new ServicePrincipal('lambda.amazonaws.com')
@@ -56,6 +59,7 @@ export class ApiGatewayStack extends Stack {
       depsLockFilePath: join(__dirname, '../lambdas', 'package-lock.json'),
       environment: {
         TABLE_NAME: socialDynamoName,
+        BUCKET_NAME: bucketName,
         TTL_KEY: ttlKey,
         HOST: props.hostName
       },
