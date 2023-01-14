@@ -30,10 +30,13 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<V
   if (!token) { res.status(401).send("Unauthorized."); return }
 
   const customer = (await Iron.unseal(token, secret.seal, Iron.defaults)) as Customer
+  
+  let b = req.body as VariantRequest
+  if (typeof req.body === "string") { b = JSON.parse(req.body) as VariantRequest }
 
-  let b = JSON.parse(req.body) as VariantRequest
+  //let b = JSON.parse(req.body) as VariantRequest
   let countryCode: CountryCode = customer.geo.country_code2 || 'US'
-  //console.log(countryCode)
+  console.log(countryCode)
   
   //console.log(`blueprintid: ${b.blueprintId}, printproviderid: ${b.printprovider}`)
   let providerVariants = await got.get(`https://api.printify.com/v1/catalog/blueprints/${b.blueprintId}/print_providers/${b.printprovider}/variants.json`, 

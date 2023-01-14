@@ -8,7 +8,7 @@ import { SNSStack } from './stacks/sns-stack'
 import { ApiGatewayStack } from './stacks/apigateway-stack'
 
 const PROJECT_NAME = 'AIApparel'
-const DOMAIN = "https://aiapparelstore.com"
+const DOMAIN = "https://www.aiapparelstore.com"
 const app = new App()
 
 let s3Stack = new S3Stack(app, `${PROJECT_NAME}-S3Stack`, {

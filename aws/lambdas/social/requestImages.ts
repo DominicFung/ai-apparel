@@ -6,7 +6,7 @@ import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb'
 import namedColors from 'color-name-list'
 import manualColors from '../../../color.json'
 
-import { AIImageResponse, ReplicateStableDiffusionResponse } from '../../../types/replicate'
+import { AIImageResponse, GenerateAIImageRequest, ReplicateStableDiffusionResponse } from '../../../types/replicate'
 import { Product } from '../../../types/product'
 import { MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyMockRequest, PrintifyMockResponse, VariantResponse } from '../../../types/printify'
 import { CustomerRequest, CustomerResponse } from '../../../types/customer'
@@ -16,7 +16,7 @@ import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 
 
 const TABLE_NAME = process.env.TABLE_NAME || ''
-const HOSTAPI = process.env.HOST || "https://aiapparelstore.com"
+const HOSTAPI = process.env.HOST || "https://www.aiapparelstore.com"
 
 const _WAIT_SEC = 1000
 const _NUM_IMAGES = 3
@@ -40,20 +40,17 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     const data = JSON.stringify({ ip: "0.0.0.0", admin: secret.secret } as CustomerRequest)
     
     console.log(data)
-    const rraw = await axios({ url: HOSTAPI+"/api/customer",
+    const res0 = (await axios({ url: HOSTAPI+"/api/customer",
       method: "post", data, headers: { "Content-Type": "application/json" }
-    })
-
-    console.log(rraw)
-    const res0 = rraw.data as CustomerResponse
+    })).data as CustomerResponse
     console.log(res0)
 
-    const headers = { cookie: `token=${res0.token}`, "Content-Type": "application/json" }
+    const headers = { "Cookie": `token=${res0.token};`, "Content-Type": "application/json" }
     console.log(JSON.stringify(headers, null, 2))
     
     // Generate new image
     const res1 = (await axios(HOSTAPI+"/api/replicate/stablediffusion/generate", {
-      method: "POST", headers, data: JSON.stringify({ num_executions: 1, prompt: event.prompt })
+      method: "POST", headers, data: JSON.stringify({ num_executions: 1, input: { prompt: event.prompt } } as GenerateAIImageRequest)
     })).data as ReplicateStableDiffusionResponse[]
     let temp = {id: res1[0].id, status: 'PROCESSING'} as AIImageResponse
     const itemId = temp.id
