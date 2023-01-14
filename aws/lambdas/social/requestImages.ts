@@ -18,7 +18,7 @@ import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 const TABLE_NAME = process.env.TABLE_NAME || ''
 const HOSTAPI = process.env.HOST || "https://www.aiapparelstore.com"
 
-const _WAIT_SEC = 1000
+const _WAIT_SEC = 5000
 const _NUM_IMAGES = 3
 
 export const handler = async (event: any): Promise<{statusCode: number, body: string}> => {
@@ -70,19 +70,26 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     const cameras = res3.locationVariant[i2].mockup.cameras
     const colorName = colorNameToHex(res3.locationVariant[i2].options.color)
 
+    console.log(`variantId: ${variantId}`)
+    console.log(`cameras ${JSON.stringify(cameras)}`)
+    console.log(`color Hex: ${colorName}`)
+
     // wait for loading to complete
     for (let i=0; i<10; i++) {
+      console.log(`Waiting ... ${i}`)
       await wait(_WAIT_SEC)
       const res4 = (await axios(HOSTAPI+`/api/replicate/stablediffusion/${temp.id}`, { headers })).data as AIImageResponse
       if (res4.status === "ERROR") return { statusCode: 500, body: "Image Processing Error" }
       if (res4.status === "COMPLETE") { temp = res4; break }
     }
 
+    console.log(`temp: ${JSON.stringify(temp)}`)
+
     if (temp.url) {
       const g = generateRandomUniqueIntegers(_NUM_IMAGES, res3.locationVariant.length)
 
       const res5 = (await axios(`${HOSTAPI}/api/printify/mockup/upload`, {
-        method: "POST",
+        method: "POST", headers,
         data: JSON.stringify({ 
           itemId, productId, providerId: printprovider.toString()
         } as MockUploadToPrintifyRequest)
@@ -94,7 +101,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
 
       for (const {i, j} of g.map((i, j) => ({i, j}))) {
         const res6 = (await axios(HOSTAPI+`/api/printify/mockup/${itemId}`, {
-          method: 'POST',
+          method: 'POST', headers,
           data: JSON.stringify({
             blueprintId: Number(productId),
             printProviderId: printprovider,
