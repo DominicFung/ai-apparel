@@ -40,9 +40,11 @@ new SNSStack(app, `${PROJECT_NAME}-SNSStack`, {
 
 let gatewayStack = new ApiGatewayStack(app, `${PROJECT_NAME}-APIGatewayStack`, {
   name: PROJECT_NAME,
+  bucketName: `${PROJECT_NAME}Bucket`,
   restAPIName: "ai-apparel-social",
   hostName: DOMAIN
 })
 gatewayStack.addDependency(dynamoStack)
+gatewayStack.addDependency(s3Stack)
 
 app.synth()

@@ -71,7 +71,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<A
       }
     })
     promise.push(client.send(command))
-    Promise.all(promise)
+    await Promise.all(promise)
 
     res.status(200).json({
       id: serviceId,

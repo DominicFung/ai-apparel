@@ -86,7 +86,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<A
         const service = unmarshall(response0.Item) as AIService
     
         const sr = JSON.parse(service.response) as { input: { prompt: string } }
-        Promise.all(promise)
+        await Promise.all(promise)
 
         console.log(`service private? ${service.isPrivate}`)
         console.log(`canAccess: ${service.canAccess}, customerId: ${customer.customerId}`)
