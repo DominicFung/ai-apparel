@@ -3,6 +3,7 @@ import axios from 'axios'
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager"
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb'
 import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { APIGatewayEvent } from 'aws-lambda'
 
 import namedColors from 'color-name-list'
 import manualColors from '../../../color.json'
@@ -24,11 +25,13 @@ const HOSTAPI = process.env.HOST || ''
 const _WAIT_SEC = 7500
 const _NUM_IMAGES = 3
 
-export const handler = async (event: any): Promise<{statusCode: number, body: string}> => {
+export const handler = async (event: APIGatewayEvent): Promise<{statusCode: number, body: string}> => {
   console.log(event)
-  if (!event.tabname)   return { statusCode: 400, body: "bad request" }
-  if (!event.socialId)  return { statusCode: 400, body: "bad request" }
-  if (!event.prompt)    return { statusCode: 400, body: "bad request" }
+  if (!event.queryStringParameters?.tabName)   return { statusCode: 400, body: "bad request" }
+  if (!event.queryStringParameters?.socialId)  return { statusCode: 400, body: "bad request" }
+
+  const tabName = event.queryStringParameters!.tabName as string
+  const socialId =event.queryStringParameters!.socialId as string
 
   const smc = new SecretsManagerClient({})
   const command = new GetSecretValueCommand({
@@ -41,11 +44,45 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
 
   if (rawsecret) {
     const secret = JSON.parse(rawsecret) as any
-    const data = JSON.stringify({ ip: "0.0.0.0", admin: secret.secret } as CustomerRequest)
+
+    const authClient = await (new auth.GoogleAuth({ 
+      credentials: secret.google,
+      scopes: [ "https://www.googleapis.com/auth/spreadsheets" ]
+    })).getClient()
+
+    let row = 0; let soc = ""; let promptRaw = "" as string|null|undefined
+    let tabRaw = undefined as sheets_v4.Schema$GridData|undefined
+    const tabBase = await getSheetTab(authClient, { tabName: tabName, lastRow: 200, lastColumn: "Z" })
+    if (!tabBase || !tabBase.data) return { statusCode: 500, body: "Tab data is empty." }
+    for (const t of tabBase.data!) {
+      if (!t || !t.rowData || t.rowData!.length <= 1) return { statusCode: 500, body: "Row Data is empty." }
+      const drilldownHeaders = head(_headersDrillDown, t.rowData[0] )
+      
+      for (const {r, i} of t.rowData!.map((r, i) => ({r, i})) ) {
+        if (i === 0) { continue } 
+        else {
+          console.log("getting Row ...") 
+          const a = r.values![drilldownHeaders["SocialId"]]?.effectiveValue?.stringValue
+          if (a && a === socialId) { 
+            row = i; soc=a; 
+            promptRaw = r.values![drilldownHeaders["Prompt"]]?.effectiveValue?.stringValue
+            break
+          }
+        }
+      }
+
+      if (soc) { tabRaw=t; break }
+    }
+
+    if (!row) return { statusCode: 400, body: `No Row found with SocialId: ${socialId}` }
+    if (!soc) return { statusCode: 400, body: `Missing SocialId: ${socialId}` }
+    if (!tabRaw) return { statusCode: 400, body: `Tab Not Found.` }
+    if (!promptRaw) return { statusCode: 400, body: `Prompt is NULL for SocialId: ${socialId}.` }
     
-    console.log(data)
+    const prompt = promptRaw!
+    
     const res0 = (await axios({ url: HOSTAPI+"/api/customer",
-      method: "post", data, headers: { "Content-Type": "application/json" }
+      method: "post", data: JSON.stringify({ ip: "0.0.0.0", admin: secret.secret } as CustomerRequest), headers: { "Content-Type": "application/json" }
     })).data as CustomerResponse
     console.log(res0)
 
@@ -54,7 +91,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     
     // Generate new image
     const res1 = (await axios(HOSTAPI+"/api/replicate/stablediffusion/generate", {
-      method: "POST", headers, data: JSON.stringify({ num_executions: 1, input: { prompt: event.prompt } } as GenerateAIImageRequest)
+      method: "POST", headers, data: JSON.stringify({ num_executions: 1, input: { prompt } } as GenerateAIImageRequest)
     })).data as ReplicateStableDiffusionResponse[]
     let temp = {id: res1[0].id, status: 'PROCESSING'} as AIImageResponse
     const itemId = temp.id
@@ -90,16 +127,10 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
     console.log(`temp: ${JSON.stringify(temp)}`)
 
     if (temp.url) {
-      const g = generateRandomUniqueIntegers(_NUM_IMAGES, res3.locationVariant.length)
+      const g = generateRandomUniqueIntegers(_NUM_IMAGES, cameras.length)
+      console.log(g)
 
-      // Save again
-      // console.log("Ensure proper S3 Save. Please wait ..")
-      // await wait(_WAIT_SEC*3)
-      // console.log(
-      //   (await axios(HOSTAPI+`/api/replicate/stablediffusion/${itemId}`, { headers })).data as AIImageResponse
-      // )
-
-      const _MAX = 30
+      const _MAX = 10
       for (let k = 0; k < _MAX; k++) {
         await wait(_WAIT_SEC)
         try {
@@ -126,13 +157,15 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
       let values = [] as string[]
 
       for (const {i, j} of g.map((i, j) => ({i, j}))) {
+        console.log(`working with random index: ${i} camera: ${cameras[i]}`)
+
         const res6 = (await axios(HOSTAPI+`/api/printify/mockup/${itemId}`, {
           method: 'POST', headers,
           data: JSON.stringify({
             blueprintId: Number(productId),
             printProviderId: printprovider,
             variantId: variantId,
-            cameraId: cameras[i].camera_id,
+            cameraId: cameras[i].id,
             size: 'full',
             images: res5.images,
             baseColorHex: colorName
@@ -142,61 +175,39 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
         // Write Images to array
         exString = `${exString} image${j} = :image${j}`
         exAttribute[`:image${j}`] = { S: res6.url }
-        values.push(`=IMAGE(${res6.url})`)
+        values.push(`=IMAGE("${res6.url}")`)
 
         if (j < g.length-1) exString = `${exString}, `
       }
 
+      values.push(`=HYPERLINK("${HOSTAPI}/p/${productId}/i/${itemId}")`)
+
       await dynamo.send(new UpdateItemCommand({
         TableName: TABLE_NAME,
-        Key: { socialId: { S: event.socialId } },
+        Key: { socialId: { S: socialId } },
         UpdateExpression: exString,
         ExpressionAttributeValues: exAttribute
       }))
 
-      const authClient = await (new auth.GoogleAuth({ 
-        credentials: secret.google,
-        scopes: [ "https://www.googleapis.com/auth/spreadsheets" ]
-      })).getClient()
+      // write to google sheet.
+      const sletter = _headersDrillDown.indexOf("Image1")
+      const eletter = _headersDrillDown.indexOf(`Link`)
+      if (sletter === -1 || eletter === -1) return { statusCode: 500, body: `Missing "Image1" or "Link" Column.` }
 
-      // Write to Google Sheet
-      const tab = await getSheetTab(authClient, { tabName: event.tabname, lastRow: 200, lastColumn: "Z" })
-      if (!tab || !tab.data) return { statusCode: 500, body: "Tab data is empty." }
-      for (const t of tab.data!) {
-        if (!t || !t.rowData || t.rowData!.length <= 1) return { statusCode: 500, body: "Row Data is empty." }
-        const drilldownHeaders = head(_headersDrillDown, t.rowData[0] )
-        
-        let row = 0
-        for (const {r, i} of t.rowData!.map((r, i) => ({r, i})) ) {
-          if (i === 0) { continue } 
-          else {
-            console.log("getting Row ...") 
-            const a = r.values![drilldownHeaders["SocialId"]]?.effectiveValue?.stringValue
-            if (a && a === event.socialId) { row = i; break }
-          }
-        }
-        if (!row) return { statusCode: 400, body: `Missing SocialId: ${event.socialId}` }
+      const s = _alphabet.charAt(sletter)
+      const e = _alphabet.charAt(eletter)
 
-        const sletter = _headersDrillDown.indexOf("Image1")
-        const eletter = _headersDrillDown.indexOf(`Image${_NUM_IMAGES}`)
-        if (sletter === -1 || eletter === -1) return { statusCode: 500, body: `Missing column Image${_NUM_IMAGES}` }
+      const client = sheets({ version: "v4", auth: authClient })
+      const params = {
+        spreadsheetId: _spreadsheet,
+        range: `${tabName}!${s}${row+1}:${e}${row+1}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [ values ] }
+      } as sheets_v4.Params$Resource$Spreadsheets$Values$Update
+      const res7 = await client.spreadsheets.values.update(params)
+      console.log(res7)
 
-        const s = _alphabet.charAt(sletter)
-        const e = _alphabet.charAt(eletter)
-
-        const client = sheets({ version: "v4", auth: authClient })
-        const params = {
-          spreadsheetId: _spreadsheet,
-          range: `${event.tabname}!${s}${row}:${e}${row}`,
-          valueInputOption: "RAW",
-          requestBody: { values: [ values ] }
-        } as sheets_v4.Params$Resource$Spreadsheets$Values$Update
-        const res7 = await client.spreadsheets.values.update(params)
-        console.log(res7)
-
-        return { statusCode: 200, body: "OK" }
-      }
-      return { statusCode: 500, body: "Server Error" }
+      return { statusCode: 200, body: "OK" }
     }
     return { statusCode: 500, body: "Server Error" }
   }
