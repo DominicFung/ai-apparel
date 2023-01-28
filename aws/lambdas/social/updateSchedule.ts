@@ -10,6 +10,7 @@ import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb'
 import { marshall } from '@aws-sdk/util-dynamodb'
 
 import { generatePrompt, getSheetTab, head, HeadersDrillDown, Month, Prompt, _alphabet, _headersDrillDown, _headersMaster, _masterSheetTitle, _months, _promptChoices, _spreadsheet } from "./global"
+import { APIGatewayEvent } from 'aws-lambda'
 
 const TABLE_NAME = process.env.TABLE_NAME || ''
 const TTL_KEY = process.env.TTL_KEY || ''
@@ -22,7 +23,7 @@ const IMAGE_FUNCTION_NAME = process.env.IMAGE_FUNCTION_NAME || ''
  * @param event 
  * @returns 
  */
-export const handler = async (event: any): Promise<{statusCode: number, body: string}> => {
+export const handler = async (event: APIGatewayEvent): Promise<{statusCode: number, body: string}> => {
   console.log(event)
   if (!event.body)        return { statusCode: 400, body: "bad request" }
   const body = JSON.parse(event.body) as { month: Month, year: string }
@@ -44,13 +45,17 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
   const lambda = new LambdaClient({})
 
   const smc = new SecretsManagerClient({})
-  const command = new GetSecretValueCommand({
+  const rawsecret = (await smc.send(new GetSecretValueCommand({
     SecretId: "aiapparel/secret"
-  })
-  const rawsecret = (await smc.send(command)).SecretString
+  }))).SecretString
 
-  if (rawsecret) {
+  const rawcdkoutput = (await smc.send(new GetSecretValueCommand({
+    SecretId: "aiapparel/cdk"
+  }))).SecretString
+
+  if (rawsecret && rawcdkoutput) {
     const secret = JSON.parse(rawsecret) as any
+    const cdk = JSON.parse(rawcdkoutput) as any
 
     const authClient = await (new auth.GoogleAuth({ 
       credentials: secret.google,
@@ -75,6 +80,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
 
         let values = [ _headersDrillDown ] as string [][]
         let dynamoPromises = []
+        let imageRequests = [] as { socialId: string, tabName: string }[]
 
         for (const {r, i} of t.rowData!.map((r, i) => ({r, i}))) { 
           if (i === 0) { continue /** skip first row */ }
@@ -158,17 +164,19 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
             dynamoPost.joke = post.Joke
 
             console.log(`post: ${JSON.stringify(dynamoPost, null, 2)}`)
-            lambda.send(new InvokeCommand({
-              FunctionName: IMAGE_FUNCTION_NAME,
-              Payload: fromUtf8(JSON.stringify({
-                socialId: post.SocialId,
-                prompt: post.Prompt
-              }))
-            }))
+            imageRequests.push({ socialId: post.SocialId, tabName })
+
+            let GATEWAY_URI = ""
+            for (const k of Object.keys(cdk["AIApparel-APIGatewayStack"])) {
+              if (k.startsWith("SocialAPIEndpoint")) { GATEWAY_URI=cdk["AIApparel-APIGatewayStack"][k]; break }
+            }
+            if (!GATEWAY_URI) return { statusCode: 500, body: "Missing Gateway URI." }
 
             let v = Array(_headersDrillDown.length).fill("")
             for (const h of Object.keys(post)) {
-              if (_headersDrillDown.includes(h)) {
+              if (h === "SocialId") {
+                v[drilldownHeaders[h]] = `=HYPERLINK("${GATEWAY_URI}/api/social/schedule/update/post?socialId=${post[h]}&tabName=${tabName}","${post[h]}")`
+              } else if (_headersDrillDown.includes(h)) {
                 v[drilldownHeaders[h]] = post[h]
               }
             }
@@ -190,9 +198,21 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
           requestBody: { values },
         }) )
 
+        // generate first batch of images.
+        for (const p of imageRequests) {
+          await lambda.send(new InvokeCommand({
+            FunctionName: IMAGE_FUNCTION_NAME,
+            Payload: fromUtf8(JSON.stringify({
+              queryStringParameters: {
+                socialId: p.socialId,
+                tabName: p.tabName
+              }
+            }))
+          }))
+        }
+
         await Promise.all(dynamoPromises)
       }
-
       return { statusCode: 200, body: "OK" }
     }
     return { statusCode: 500, body: "Server Error" }
@@ -230,9 +250,6 @@ const getJoke = async (
   console.log(JSON.stringify(response.data, null, 2))
 
   return response.data.choices[0].text
-
-  // const jokes = response.data.choices[0].text?.split("\n")
-  // return jokes?.slice(0, 5)
 }
 
 const capitialize = (string: string) => {

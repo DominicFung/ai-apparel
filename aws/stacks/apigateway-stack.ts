@@ -48,6 +48,10 @@ export class ApiGatewayStack extends Stack {
           new PolicyStatement({
             actions: [ "dynamodb:*" ],
             resources: [ `${socialDynamoArn}*` ]
+          }),
+          new PolicyStatement({
+            actions: [ "lambda:InvokeFunction" ],
+            resources: [ `*` ]
           })
         ]
       })
@@ -66,6 +70,14 @@ export class ApiGatewayStack extends Stack {
       runtime: Runtime.NODEJS_16_X,
     }
 
+    // called by update schedule programatically
+    const requestImages = new NodejsFunction(this, `${props.name}-RequestImages`, {
+      entry: join(__dirname, '../lambdas', 'social', 'requestImages.ts'),
+      memorySize: 10240,
+      timeout: Duration.minutes(15),
+      ...nodeJsFunctionProps
+    })
+
     const createSchedule = new NodejsFunction(this, `${props.name}-CreateSchedule`, {
       entry: join(__dirname, '../lambdas', 'social', 'createSchedule.ts'),
       memorySize: 10240,
@@ -77,19 +89,13 @@ export class ApiGatewayStack extends Stack {
       entry: join(__dirname, '../lambdas', 'social', 'updateSchedule.ts'),
       memorySize: 10240,
       timeout: Duration.minutes(15),
-      ...nodeJsFunctionProps
-    })
-
-    // called by update schedule programatically
-    new NodejsFunction(this, `${props.name}-RequestImages`, {
-      entry: join(__dirname, '../lambdas', 'social', 'requestImages.ts'),
-      memorySize: 10240,
-      timeout: Duration.minutes(15),
-      ...nodeJsFunctionProps
+      ...nodeJsFunctionProps,
+      environment: { ...nodeJsFunctionProps.environment, IMAGE_FUNCTION_NAME: requestImages.functionName }
     })
 
     const createScheduleIntegration = new LambdaIntegration(createSchedule)  
     const updateScheduleIntegration = new LambdaIntegration(updateSchedule)
+    const requestImagesIntegration = new LambdaIntegration(requestImages)
     
     // Create an API Gateway resource for each of the CRUD operations
     const api = new RestApi(this, 'SocialAPI', {
@@ -106,7 +112,10 @@ export class ApiGatewayStack extends Stack {
 
     const schedule = social.addResource('schedule')
     schedule.addResource('create').addMethod('POST', createScheduleIntegration, { apiKeyRequired: true })
-    schedule.addResource('update').addMethod('POST', updateScheduleIntegration, { apiKeyRequired: true })
+    
+    const update = schedule.addResource('update')
+    update.addResource('month').addMethod('POST', updateScheduleIntegration, { apiKeyRequired: true })
+    update.addResource('post').addMethod('GET', requestImagesIntegration) // we can do inline hyperlink on google sheets
 
     const plan = api.addUsagePlan(`${props.name}-UsagePlan`, {
       throttle: {
