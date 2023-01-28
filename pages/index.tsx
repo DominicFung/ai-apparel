@@ -149,6 +149,7 @@ const Home: NextPageWithLayout = (props) => {
         property="og:image"
         content="https://aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com/public/stablediffusion/4hj6efalc5ge5bq4z32ys2kjv4/original.jpg"
       />
+      <meta name="facebook-domain-verification" content="sv3nt8bevvehlx6r36ibcpax5n6w8l" />
     </Head>
     <div className={`${s.mainBackground}`}>
       <div className={s.section1}>
