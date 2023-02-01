@@ -6,7 +6,7 @@ const Copyright = () => {
   return (
     <div className="flex flex-col justify-center text-xs">
       <p>{'Copyright © '+new Date().getFullYear()+" "}
-        <a href="#" className="text-gray-700 hover:underline">AI Apperal Store</a>
+        <a href="#" className="text-gray-700 hover:underline">AI Apparel Store</a>
       </p>
       <span className="text-gray-400">Powered by: <a href="#" className="hover:underline">Dom Fung</a></span>
     </div>
@@ -18,7 +18,7 @@ export default function Footer () {
     <div className="w-full bg-white grid grid-cols-5 lg:h-screen/5">
       <div className="flex flex-col pt-9 md:col-span-2 col-span-5">
         <div className="w-full p-4 flex justify-center">
-          AI Apperal Store
+          AI Apparel Store
         </div>
         <div className="flex flex-row justify-center">
           <a href="#" className="text-lightsage p-1"><InstagramIcon style={{fontSize: "2rem"}} /></a>

@@ -133,14 +133,14 @@ const Home: NextPageWithLayout = (props) => {
     <>
     <Head>
       <title>
-        AI Apperal Store | Generative AI
+        AI Apparel Store | Generative AI
       </title>
       <meta
         name="description"
         content="FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.)"
         key="desc"
       />
-      <meta property="og:title" content="AI Apperal Store | FREE AI Apperal Designer" />
+      <meta property="og:title" content="AI Apparel Store | FREE AI Apparel Designer" />
       <meta
         property="og:description"
         content="FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI."
@@ -170,7 +170,7 @@ const Home: NextPageWithLayout = (props) => {
         <div className='w-full flex justify-center'>
           <div className={`${s.glass} m-5`}>
             <div className={`${s.title} text-center lg:text-left text-2xl lg:text-8xl leading-relaxed`}>
-              Free AI Apperal Designer
+              Free AI Apparel Designer
             </div>
             <p className={`${s.titleParagraph} hidden lg:inline-block text-base lg:text-2xl`}>
               Describe the image you want to see on your apparel and print!
