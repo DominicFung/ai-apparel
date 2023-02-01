@@ -453,17 +453,17 @@ const Item: NextPageWithLayout = (props) => {
   return (<>
     <Head>
       <title>
-        AI Apperal Store | Product
+        AI Apparel Store | Product
       </title>
       <meta
         name="description"
-        content={`Extremely amazing AI Designed Apperal by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
+        content={`Extremely amazing AI Designed Apparel by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
         key="desc"
       />
-      <meta property="og:title" content={`AI Apperal Store | Product`} />
+      <meta property="og:title" content={`AI Apparel Store | Product`} />
       <meta
         property="og:description"
-        content={`Extremely amazing AI Designed Apperal by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
+        content={`Extremely amazing AI Designed Apparel by user. FREE Generative AI Apparel Designer (Shirts, Hoodies, Tote Bags, etc.). Enjoy the power of Text-to-Image AI.`}
       />
       <meta
         property="og:image"
