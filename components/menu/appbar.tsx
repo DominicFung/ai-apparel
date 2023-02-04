@@ -54,8 +54,9 @@ export default function AppBar () {
           <div className="flex flex-grow" />
           <div className={`text-sm flex flex-row items-center justify-between`}>
             <span className={`block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4`}>
-              <Link href="/creations">Creations!</Link></span>
-            <a href="#responsive-header" className={`block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4`}>About</a>
+              <Link href="/creations">Creations!</Link>
+            </span>
+            <a href="/about" className={`block mt-4 lg:inline-block lg:mt-0 text-gray-100 mr-4`}>About</a>
             <div>
               <span className="relative inline-block">
                 <Link href={'/'} className={`inline-block text-sm px-4 py-2 text-gray-100 hover:text-white`}>
@@ -72,6 +73,7 @@ export default function AppBar () {
               
             </div>
           </div>
+          <div className='w-20 m-5' />
         </div>
       </nav>
   )
