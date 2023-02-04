@@ -35,7 +35,7 @@ export interface GeoData {
       "name": string,
       "offset": number,
       "current_time": string,
-      "current_time_unix": number,
+      "current_time_unix": string,
       "is_dst": boolean,
       "dst_savings": number
   }

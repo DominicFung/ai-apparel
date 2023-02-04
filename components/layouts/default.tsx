@@ -2,7 +2,9 @@ import Footer from '../menu/footer'
 import { ReactElement, cloneElement, useState, useEffect } from 'react'
 import AppBar from '../menu/appbar'
 
-import { Customer, CustomerRequest, CustomerResponse } from '../../types/customer'
+import CurrencyMenu from '../menu/currencymenu'
+
+import { CustomerRequest, CustomerResponse } from '../../types/customer'
 
 import jscookie from 'js-cookie'
 
@@ -13,9 +15,14 @@ export default function DefaultLayout({ children }: LayoutProps) {
 
   const getGeo = async ():Promise<{ip: string}> => {
     let geourl = `https://api.ipify.org?format=json`
-    let geo = await (await fetch(geourl)).json() as {ip: string}
-    console.log(geo)
-    return geo
+    try {
+      let geo = await (await fetch(geourl)).json() as {ip: string}
+      console.log(geo)
+      return geo
+    } catch (e) {
+      console.warn("ipify likely blocked by adblocker or other privacy extentions on client app.")
+      return { ip: "UNKNOWN" }
+    }
   }
 
   const getNewCustomer = async () => {
@@ -41,8 +48,19 @@ export default function DefaultLayout({ children }: LayoutProps) {
     setCustomer(res)
   }
 
+  const setCustomerCurrency = async (currency: string) => {
+    const url = '/api/customer'
+    let res = await (await fetch(url, { method: 'POST', body: JSON.stringify({
+      customerRequestCurrency: currency
+    }) })).json() as CustomerResponse
+    console.log(`EXCHANGE RATE SET ${res.exchangeRate}`)
+    jscookie.set("token", res.token)
+    setCustomer(res)
+  }
+
   useEffect(() => {
     let token = jscookie.get("token")
+    console.log(token)
     if (!token || token === "") { getNewCustomer() }
     else { getOldCustomer() }
   }, [])
@@ -58,6 +76,7 @@ export default function DefaultLayout({ children }: LayoutProps) {
         }
       ><section className=" w-screen h-full cursor-pointer " /></main>
       <AppBar />
+      <CurrencyMenu currency={customer?.currency || "USD"} setCurrency={setCustomerCurrency} />
         <main>{cloneElement(children, { customer } )}</main>
       <Footer />
     </>

@@ -15,6 +15,8 @@ import { marshall } from '@aws-sdk/util-dynamodb'
 import { GetObjectCommand, S3Client, S3ClientConfig } from '@aws-sdk/client-s3'
 import { Conversion } from '../../../utils/utils'
 
+import commonCurrency from '../../../common-currency.json'
+
 export default async function handler(req: NextApiRequest,res: NextApiResponse<CustomerResponse>) {
   //if (!req.body) { console.error("/api/customer - body is empty"); return }
   const token = req.cookies.token
@@ -32,7 +34,6 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
     b = JSON.parse(b) as CustomerRequest 
   }
 
-  
   console.log(b)
   console.log(token)
   if (!token && !b.ip) { res.status(401); return }
@@ -68,31 +69,59 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
 
     if (token) {
       const customer = (await Iron.unseal(token, secret.seal, Iron.defaults)) as Customer
-      if (customer) {
-        customer.lastAccess = Date.now()
-        const command = new PutItemCommand({
-          TableName: cdk["AIApparel-DynamoStack"].AIApparelcustomerTableName,
-          Item: marshall(customer)
-        })
-        await client.send(command)
-        
-        const refreshToken = await Iron.seal(customer, secret.seal, Iron.defaults)
-        console.log(`Exchange Rate: ${customer.geo.currency.code} ${conversion.rates[customer.geo.currency.code]}`)
-        res.json({ token: refreshToken, currency: customer.geo.currency.code, exchangeRate: conversion.rates[customer.geo.currency.code] })
-        return
+      if (b.customerRequestCurrency) {
+        console.log(`== Customer Request Currency ${b.customerRequestCurrency} ==`)
+        if (customer) {
+          let rCustomer = customer
+          console.log(Object.keys(commonCurrency))
+          
+          if (Object.keys(commonCurrency).includes(b.customerRequestCurrency)) {
+            const currency = b.customerRequestCurrency
+
+            rCustomer.geo.currency.code = currency
+            rCustomer.geo.currency.name = commonCurrency[currency].name
+            rCustomer.geo.currency.symbol = commonCurrency[currency].symbol_native
+          } else console.warn("No Currency Modifications!")
+
+          customer.lastAccess = Date.now()
+          const command = new PutItemCommand({
+            TableName: cdk["AIApparel-DynamoStack"].AIApparelcustomerTableName,
+            Item: marshall(rCustomer)
+          })
+          await client.send(command)
+
+          const refreshToken = await Iron.seal(rCustomer, secret.seal, Iron.defaults)
+          console.log(`Exchange Rate: ${rCustomer.geo.currency.code} ${conversion.rates[rCustomer.geo.currency.code]}`)
+          res.json({ token: refreshToken, currency: rCustomer.geo.currency.code, symbol: rCustomer.geo.currency.symbol, exchangeRate: conversion.rates[rCustomer.geo.currency.code] })
+          return
+        }
+      } else {
+        console.log("== Requesting new customer ==")
+        if (customer) {
+          customer.lastAccess = Date.now()
+          const command = new PutItemCommand({
+            TableName: cdk["AIApparel-DynamoStack"].AIApparelcustomerTableName,
+            Item: marshall(customer)
+          })
+          await client.send(command)
+          
+          const refreshToken = await Iron.seal(customer, secret.seal, Iron.defaults)
+          console.log(`Exchange Rate: ${customer.geo.currency.code} ${conversion.rates[customer.geo.currency.code]}`)
+          res.json({ token: refreshToken, currency: customer.geo.currency.code, symbol: customer.geo.currency.symbol, exchangeRate: conversion.rates[customer.geo.currency.code] })
+          return
+        }
       }
     }
     
     if (b.ip) {
       console.log(b.ip)
-
-      let geo = {
-        currency: { code: "CAN", symbol: "$" }
-      } as GeoData
+      let geo = { ip: "ADMIN", currency: { code: "CAN", symbol: "$" } } as GeoData
 
       let customerId = uuidv4()
       if (b.admin && b.admin === secret.secret) {
         customerId = "ADMIN"
+      } else if (b.ip === "UNKNOWN") {
+        geo = { ip: "UNKNOWN", currency: { code: "USD", symbol: "$" } } as GeoData
       } else {
         geo = await got.get(`https://api.ipgeolocation.io/ipgeo?apiKey=${secret.ipgeolocation.token}&ip=${b.ip}`).json() as GeoData
       }
@@ -109,7 +138,7 @@ export default async function handler(req: NextApiRequest,res: NextApiResponse<C
   
       const customerToken = await Iron.seal(customer, secret.seal, Iron.defaults)
       console.log(`Exchange Rate: ${customer.geo.currency.code} ${conversion.rates[customer.geo.currency.code]}`)
-      res.json({ token: customerToken, currency: customer.geo.currency.code, exchangeRate: conversion.rates[customer.geo.currency.code] })
+      res.json({ token: customerToken, currency: customer.geo.currency.code, symbol: customer.geo.currency.symbol, exchangeRate: conversion.rates[customer.geo.currency.code] })
       return
     }
   }
