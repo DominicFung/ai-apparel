@@ -10,11 +10,11 @@ import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb'
 import { marshall } from '@aws-sdk/util-dynamodb'
 
 import { generatePrompt, getSheetTab, head, HeadersDrillDown, Month, Prompt, _alphabet, _headersDrillDown, _headersMaster, _masterSheetTitle, _months, _promptChoices, _spreadsheet } from "./global"
-import { APIGatewayEvent } from 'aws-lambda'
+import { APIGatewayEvent, EventBridgeEvent } from 'aws-lambda'
 
-const TABLE_NAME = process.env.TABLE_NAME || ''
-const TTL_KEY = process.env.TTL_KEY || ''
-const IMAGE_FUNCTION_NAME = process.env.IMAGE_FUNCTION_NAME || ''
+let TABLE_NAME = process.env.TABLE_NAME || ''
+let TTL_KEY = process.env.TTL_KEY || ''
+let IMAGE_FUNCTION_NAME = process.env.IMAGE_FUNCTION_NAME || ''
 
 /**
  * Main processor for a single "<Month><Year>" page.
@@ -23,22 +23,38 @@ const IMAGE_FUNCTION_NAME = process.env.IMAGE_FUNCTION_NAME || ''
  * @param event 
  * @returns 
  */
-export const handler = async (event: APIGatewayEvent): Promise<{statusCode: number, body: string}> => {
-  console.log(event)
-  if (!event.body)        return { statusCode: 400, body: "bad request" }
-  const body = JSON.parse(event.body) as { month: Month, year: string }
+export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, {
+  TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string
+}>): Promise<{statusCode: number, body: string}> => {
+  console.log(JSON.stringify(event, null, 2))
 
-  if (!body.month)  return { statusCode: 400, body: "missing month" }
-  if (!_months.includes(body.month)) 
-    return { statusCode: 400, body: "month is not an acceptable value" }
+  let month: Month | undefined = undefined
+  let year: number | undefined = undefined
 
-  if (!body.year)   return { statusCode: 400, body: "missing year" }
-  if (Number.parseInt(body.year) < 2022) return { statusCode: 400, body: "year needs to be a number larger than 2022" }
-  
-  const b = {
-    month: body.month as Month,
-    year: Number.parseInt(body.year)
+  const now = new Date()
+  if ((event as APIGatewayEvent).body) {
+    const body = JSON.parse((event as APIGatewayEvent).body!) as { month: Month, year: string }
+
+    if (!body.month)  return { statusCode: 400, body: "missing month" }
+    if (!_months.includes(body.month)) 
+      return { statusCode: 400, body: "month is not an acceptable value" }
+
+    if (!body.year)   return { statusCode: 400, body: "missing year" }
+    if (Number.parseInt(body.year) <= now.getFullYear()) 
+      return { statusCode: 400, body: `year needs to be a number larger than or equal to ${now.getFullYear()}` }
+
+    month = body.month; year = Number.parseInt(body.year)
+  } else {
+    if (!TABLE_NAME && (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.TABLE_NAME)
+      TABLE_NAME = (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.TABLE_NAME
+    if (!TTL_KEY && (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.TTL_KEY)
+      TTL_KEY = (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.TTL_KEY
+    if (!IMAGE_FUNCTION_NAME && (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.IMAGE_FUNCTION_NAME)
+      IMAGE_FUNCTION_NAME = (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.IMAGE_FUNCTION_NAME
   }
+
+  if (!month) { month = _months[(now.getMonth() + 1) % 11 ] }
+  if (!year) { year = now.getFullYear() }
   
   console.log(`TABLE_NAME ${TABLE_NAME}`)
   const dynamo = new DynamoDBClient({})
@@ -62,7 +78,7 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
       scopes: [ "https://www.googleapis.com/auth/spreadsheets" ]
     })).getClient()
 
-    const tabName = `${b.month}${b.year}`
+    const tabName = `${month}${year}`
     const client = sheets({ version: "v4", auth: authClient })
 
     const masterTab = await getSheetTab(authClient, { tabName: _masterSheetTitle, lastRow: 200, lastColumn: "Z" })
@@ -72,8 +88,9 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
       const grid = masterTab.data[0] // should only be one, since we always submit only 1 range
       if (!grid) { return { statusCode: 500, body: `Tab ${_masterSheetTitle} range could not be found` } }
       
-      const headers = head(_headersMaster, grid.rowData![0]) // wr
+      const headers = head(_headersMaster, grid.rowData![0])
 
+      // Should only be 1 tab with "<Month><Year>"
       for (const t of tab.data!) {
         if (!t.rowData || t.rowData.length <= 1) { console.warn(`This sheet, "${tabName}", has no rows. Skipping.`); continue }
         const drilldownHeaders = head(_headersDrillDown, t.rowData[0] )
@@ -198,20 +215,31 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
           requestBody: { values },
         }) )
 
+        console.log(`image requests: ${JSON.stringify(imageRequests)}`)
+        let lambdaPromises = []
+
         // generate first batch of images.
         for (const p of imageRequests) {
-          await lambda.send(new InvokeCommand({
-            FunctionName: IMAGE_FUNCTION_NAME,
-            Payload: fromUtf8(JSON.stringify({
-              queryStringParameters: {
-                socialId: p.socialId,
-                tabName: p.tabName
-              }
-            }))
+          console.log(JSON.stringify({
+            socialId: p.socialId,
+            tabName: p.tabName
           }))
+
+          lambdaPromises.push(
+            lambda.send(new InvokeCommand({
+              FunctionName: IMAGE_FUNCTION_NAME,
+              Payload: fromUtf8(JSON.stringify({
+                queryStringParameters: {
+                  socialId: p.socialId,
+                  tabName: p.tabName
+                }
+              }))
+            }))
+          )
         }
 
         await Promise.all(dynamoPromises)
+        await Promise.all(lambdaPromises)
       }
       return { statusCode: 200, body: "OK" }
     }

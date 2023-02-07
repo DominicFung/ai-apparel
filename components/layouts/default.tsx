@@ -3,6 +3,7 @@ import { ReactElement, cloneElement, useState, useEffect } from 'react'
 import AppBar from '../menu/appbar'
 
 import CurrencyMenu from '../menu/currencymenu'
+import { Chat } from '@domfung/5re.chat'
 
 import { CustomerRequest, CustomerResponse } from '../../types/customer'
 
@@ -77,7 +78,8 @@ export default function DefaultLayout({ children }: LayoutProps) {
       ><section className=" w-screen h-full cursor-pointer " /></main>
       <AppBar />
       <CurrencyMenu currency={customer?.currency || "USD"} setCurrency={setCustomerCurrency} />
-        <main>{cloneElement(children, { customer } )}</main>
+      <main>{cloneElement(children, { customer } )}</main>
+      <Chat open={true} />
       <Footer />
     </>
   )

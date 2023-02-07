@@ -1,6 +1,6 @@
 import { App, Duration, Fn, RemovalPolicy, Stack } from 'aws-cdk-lib'
 
-import { Rule, Schedule,  } from 'aws-cdk-lib/aws-events'
+import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
 import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Code, LayerVersion, Runtime, Tracing } from 'aws-cdk-lib/aws-lambda'

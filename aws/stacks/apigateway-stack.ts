@@ -1,5 +1,7 @@
 import { App, CfnOutput, Duration, Fn, Stack } from 'aws-cdk-lib'
 import { Cors, LambdaIntegration, Period, RestApi } from 'aws-cdk-lib/aws-apigateway'
+import { Rule, RuleTargetInput, Schedule } from 'aws-cdk-lib/aws-events'
+import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
 
 import { ManagedPolicy, Policy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
 import { Runtime } from 'aws-cdk-lib/aws-lambda'
@@ -91,6 +93,22 @@ export class ApiGatewayStack extends Stack {
       timeout: Duration.minutes(15),
       ...nodeJsFunctionProps,
       environment: { ...nodeJsFunctionProps.environment, IMAGE_FUNCTION_NAME: requestImages.functionName }
+    })
+
+    new Rule(this, `${props.name}-CreateSchedule-ScheduleRule`, {
+      schedule: Schedule.cron({ minute: '0', hour: '0', day: '2', month: 'DEC', year: '*' }),
+      targets: [ new LambdaFunction(createSchedule) ]
+    })
+
+    new Rule(this, `${props.name}-UpdateSchedule-ScheduleRule`, {
+      schedule: Schedule.cron({ minute: '0', hour: '0', day: '25', month: "*" }),
+      targets: [ new LambdaFunction(updateSchedule, { 
+        event: RuleTargetInput.fromObject({
+          TABLE_NAME: socialDynamoName,
+          BUCKET_NAME: bucketName,
+          TTL_KEY: ttlKey
+        }) 
+      }) ],
     })
 
     const createScheduleIntegration = new LambdaIntegration(createSchedule)  

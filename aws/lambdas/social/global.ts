@@ -134,3 +134,5 @@ export const generatePrompt = (exceptions?: {[k: Prompt]: string[]}): { prompt: 
     choice: { vibe, format, subject, perspective, artist, style, booster }
   }
 }
+
+export const sleep = (timeToDelay: number) => new Promise((resolve) => setTimeout(resolve, timeToDelay))
