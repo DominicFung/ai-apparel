@@ -29,7 +29,9 @@ export const handler = async (event: DynamoDBStreamEvent): Promise<{statusCode: 
     console.log(event.Records[0].dynamodb?.Keys)
     if (!event.Records[0].dynamodb?.Keys) { return { statusCode: 500, body: "Server Error" } }
 
-    const raw = event.Records[0].dynamodb?.Keys as Record<string, any>
+    //const raw = event.Records[0].dynamodb?.Keys as Record<string, any>
+    const raw = event.Records[0].dynamodb?.OldImage as Record<string, any>
+    
     let r = unmarshall(raw) as {[k: HeadersDrillDown]: any}
     console.log(`Record: ${JSON.stringify(r, null, 2)}`)
 

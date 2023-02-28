@@ -43,15 +43,13 @@ export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, 
   const now = new Date()
   if ((event as APIGatewayEvent).body) {
     const body = JSON.parse((event as APIGatewayEvent).body!) as { month: Month, year: string }
-    if (!body.month)  return { statusCode: 400, body: "missing month" }
-    if (!_months.includes(body.month)) 
+    if (body.month && !_months.includes(body.month)) 
       return { statusCode: 400, body: "month is not an acceptable value" }
+    else month = body.month
 
-    if (!body.year)   return { statusCode: 400, body: "missing year" }
-    if (Number.parseInt(body.year) <= now.getFullYear()) 
+    if (body.year && Number.parseInt(body.year) < now.getFullYear()) 
       return { statusCode: 400, body: `year needs to be a number larger than or equal to ${now.getFullYear()}` }
-
-    month = body.month; year = Number.parseInt(body.year)
+    else year = Number.parseInt(body.year)
   }
   
   if (!month) { month = "Jaunuary" }
@@ -59,6 +57,8 @@ export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, 
     if (now.getMonth() > 4) year = now.getFullYear()+1 
     else year = now.getFullYear()
   }
+
+  console.log(`updateSchedule month: ${month}, year: ${year}`)
 
   const config = {} as SecretsManagerClientConfig
   const smc = new SecretsManagerClient(config)
@@ -287,6 +287,7 @@ const createDrillDownTabs = async (
     posts: (Itinerary|EmptyItinerary)[], platform: "FaceBook" | "Instagram" 
   }[]
 ): Promise<{ statusCode: number, body: string }> => {
+  const now = new Date()
   const len = dds[0].posts.length
   for (const dd of dds) { 
     if (dd.posts.length !== len) { 
@@ -314,9 +315,10 @@ const createDrillDownTabs = async (
 
   for (let i=0; i<len; i++) {
     const sheetTitle = `${currentMonth}${currentYear}`
+    if (currentYear < now.getFullYear()) { console.log(`we wont be creating the following sheet since its less than todays year ${now.getFullYear()} : ${sheetTitle}`); continue }
     if ( currentYear !== dds[0].posts[i].postDate.year || currentMonth !== dds[0].posts[i].postDate.month) {
       if (tabsInventory[sheetTitle]) {
-        console.log(`No need to delete ${sheetTitle} for now,`)
+        console.log(`No need to delete ${sheetTitle} for now.`)
       } else {
         await client.spreadsheets.batchUpdate({
           spreadsheetId: _spreadsheet,
@@ -335,7 +337,7 @@ const createDrillDownTabs = async (
         valueInputOption: "USER_ENTERED",
         range: `${sheetTitle}!A1:${_alphabet.charAt(_headersDrillDown.length-1)}${values.length}`,
         requestBody: { values },
-      }) )
+      }) );
 
       /** Reset currentMonth / currentYear */
       currentMonth = dds[0].posts[i].postDate.month, currentYear = dds[0].posts[i].postDate.year 
@@ -364,7 +366,3 @@ const createDrillDownTabs = async (
 
   return { statusCode: 200, body: "OK" }
 }
-
-
-
-

@@ -34,16 +34,13 @@ export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, 
   const now = new Date()
   if ((event as APIGatewayEvent).body) {
     const body = JSON.parse((event as APIGatewayEvent).body!) as { month: Month, year: string }
-
-    if (!body.month)  return { statusCode: 400, body: "missing month" }
-    if (!_months.includes(body.month)) 
+    if (body.month && !_months.includes(body.month)) 
       return { statusCode: 400, body: "month is not an acceptable value" }
+    else month = body.month
 
-    if (!body.year)   return { statusCode: 400, body: "missing year" }
-    if (Number.parseInt(body.year) <= now.getFullYear()) 
+    if (body.year && Number.parseInt(body.year) < now.getFullYear()) 
       return { statusCode: 400, body: `year needs to be a number larger than or equal to ${now.getFullYear()}` }
-
-    month = body.month; year = Number.parseInt(body.year)
+    else year = Number.parseInt(body.year)
   } else {
     if (!TABLE_NAME && (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.TABLE_NAME)
       TABLE_NAME = (event as EventBridgeEvent<string, {TABLE_NAME: string, TTL_KEY: string, IMAGE_FUNCTION_NAME: string}>).detail.TABLE_NAME
@@ -55,6 +52,8 @@ export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, 
 
   if (!month) { month = _months[(now.getMonth() + 1) % 11 ] }
   if (!year) { year = now.getFullYear() }
+
+  console.log(`updateSchedule month: ${month}, year: ${year}`)
   
   console.log(`TABLE_NAME ${TABLE_NAME}`)
   const dynamo = new DynamoDBClient({})

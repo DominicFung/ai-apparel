@@ -1,10 +1,12 @@
 import { App, CfnOutput, Duration, Fn, Stack } from 'aws-cdk-lib'
 import { Cors, LambdaIntegration, Period, RestApi } from 'aws-cdk-lib/aws-apigateway'
+import { Table } from 'aws-cdk-lib/aws-dynamodb'
 import { Rule, RuleTargetInput, Schedule } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
 
 import { ManagedPolicy, Policy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam'
-import { Runtime } from 'aws-cdk-lib/aws-lambda'
+import { Runtime, StartingPosition } from 'aws-cdk-lib/aws-lambda'
+import { DynamoEventSource } from 'aws-cdk-lib/aws-lambda-event-sources'
 import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs'
 
 import { join } from 'path'
@@ -14,6 +16,7 @@ interface ApiGatewayProps {
   bucketName: string
   restAPIName: string
   hostName: string
+  socialTable: Table
 }
 
 export class ApiGatewayStack extends Stack {
@@ -110,6 +113,22 @@ export class ApiGatewayStack extends Stack {
         }) 
       }) ],
     })
+
+    const createPost = new NodejsFunction(this, `${props.name}-CreatePost`, {
+      entry: join(__dirname, '../lambdas', 'social', 'post.ts'),
+      memorySize: 10240,
+      timeout: Duration.minutes(5),
+      ...nodeJsFunctionProps,
+      environment: { 
+        ...nodeJsFunctionProps.environment, 
+        IMAGE_FUNCTION_NAME: requestImages.functionName,
+        TABLE_NAME: props.socialTable.tableName
+      }
+    })
+
+    createPost.addEventSource(new DynamoEventSource(props.socialTable, {
+      startingPosition: StartingPosition.LATEST
+    }))
 
     const createScheduleIntegration = new LambdaIntegration(createSchedule)  
     const updateScheduleIntegration = new LambdaIntegration(updateSchedule)
