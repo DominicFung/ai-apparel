@@ -127,7 +127,8 @@ export class ApiGatewayStack extends Stack {
     })
 
     createPost.addEventSource(new DynamoEventSource(props.socialTable, {
-      startingPosition: StartingPosition.LATEST
+      startingPosition: StartingPosition.LATEST,
+      retryAttempts: 0 // for wallet safety
     }))
 
     const createScheduleIntegration = new LambdaIntegration(createSchedule)  

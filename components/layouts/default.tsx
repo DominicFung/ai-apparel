@@ -3,11 +3,12 @@ import { ReactElement, cloneElement, useState, useEffect } from 'react'
 import AppBar from '../menu/appbar'
 
 import CurrencyMenu from '../menu/currencymenu'
-import { Chat } from '@domfung/5re.chat'
 
 import { CustomerRequest, CustomerResponse } from '../../types/customer'
-
 import jscookie from 'js-cookie'
+
+import dynamic from "next/dynamic"
+const Chat = dynamic(() => import('../chat'), { ssr: false })
 
 interface LayoutProps { children: ReactElement }
 export default function DefaultLayout({ children }: LayoutProps) {
@@ -79,7 +80,7 @@ export default function DefaultLayout({ children }: LayoutProps) {
       <AppBar />
       <CurrencyMenu currency={customer?.currency || "USD"} setCurrency={setCustomerCurrency} />
       <main>{cloneElement(children, { customer } )}</main>
-      <Chat open={true} />
+      <Chat />
       <Footer />
     </>
   )

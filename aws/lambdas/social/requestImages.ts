@@ -173,14 +173,20 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
         })).data as PrintifyMockResponse
 
         // Write Images to array
-        exString = `${exString} image${j} = :image${j}`
+        exString = `${exString} image${j} = :image${j},`
         exAttribute[`:image${j}`] = { S: res6.url }
         values.push(`=IMAGE("${res6.url}")`)
 
-        if (j < g.length-1) exString = `${exString}, `
+        //if (j < g.length-1) exString = `${exString}, `
       }
 
       values.push(`=HYPERLINK("${HOSTAPI}/p/${productId}/i/${itemId}")`)
+      exString = `${exString} link = :link`
+      exAttribute[`:link`] = { S: `${HOSTAPI}/p/${productId}/i/${itemId}` }
+
+      console.log(`Update ${TABLE_NAME} with the following: `)
+      console.log(exString)
+      console.log(exAttribute)
 
       await dynamo.send(new UpdateItemCommand({
         TableName: TABLE_NAME,

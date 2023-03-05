@@ -9,7 +9,7 @@ import { fromUtf8 } from '@aws-sdk/util-utf8-node'
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb'
 import { marshall } from '@aws-sdk/util-dynamodb'
 
-import { generatePrompt, getSheetTab, head, HeadersDrillDown, Month, Prompt, _alphabet, _headersDrillDown, _headersMaster, _masterSheetTitle, _months, _promptChoices, _spreadsheet } from "./global"
+import { generatePrompt, getSheetTab, head, HeadersDrillDown, Month, Prompt, sleep, _alphabet, _headersDrillDown, _headersMaster, _masterSheetTitle, _months, _promptChoices, _spreadsheet } from "./global"
 import { APIGatewayEvent, EventBridgeEvent } from 'aws-lambda'
 
 let TABLE_NAME = process.env.TABLE_NAME || ''
@@ -136,7 +136,8 @@ export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, 
             const p: { prompt: string, choice: { [k: Prompt]: string } } = generatePrompt(include)
             console.log(`PROMPT: ${JSON.stringify(p, null, 2)}`)
 
-            const joke = getJoke(secret, { subject: p.choice.subject, holiday: holiday1 })
+            //await sleep(100)
+            const joke = await getJoke(secret, { subject: p.choice.subject, holiday: holiday1 })
             console.log(`JOKE: ${JSON.stringify(joke, null, 2)}`)
 
             let post = { SocialId: uuidv4() } as {[k: HeadersDrillDown|string]: any}
@@ -166,7 +167,7 @@ export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, 
             //post[TTL_KEY] = Math.floor(new Date(post.Year, month, post.Day, post.Hour, post.Min).getTime() / 1000)
             
             post.Prompt = p.prompt
-            post.Joke = (await joke) as string
+            post.Joke = joke //(await joke) as string
             
             post.Vibe = p.choice.vibe
             post.Format = p.choice.format
