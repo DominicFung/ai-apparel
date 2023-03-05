@@ -6,6 +6,7 @@ import {
   DaysOfTheWeek, EmptyItinerary, getSheetTab, head, HeadersDrillDown, HeadersMaster, Itinerary, Month, placeholderHeader, PostRequirment, primeTime, 
   _alphabet, _daysOfTheWeek, _headersDrillDown, _headersMaster, _masterSheetTitle, _months, _spreadsheet 
 } from './global'
+import { APIGatewayEvent, EventBridgeEvent } from 'aws-lambda'
 
 /**
  * Main processor for "Holidy" page.
@@ -34,22 +35,30 @@ import {
  * @param event 
  * @returns 
  */
-export const handler = async (event: any): Promise<{statusCode: number, body: string}> => {
-  console.log(event)
-  if (!event.body)        return { statusCode: 400, body: "bad request" }
-  const body = JSON.parse(event.body) as { month: Month, year: string }
+export const handler = async (event: APIGatewayEvent | EventBridgeEvent<string, {}> ): Promise<{statusCode: number, body: string}> => {
+  console.log(JSON.stringify(event, null, 2))
+  let month: Month | undefined = undefined
+  let year: number | undefined = undefined
 
-  if (!body.month)  return { statusCode: 400, body: "missing month" }
-  if (!_months.includes(body.month)) 
-    return { statusCode: 400, body: "month is not an acceptable value" }
+  const now = new Date()
+  if ((event as APIGatewayEvent).body) {
+    const body = JSON.parse((event as APIGatewayEvent).body!) as { month: Month, year: string }
+    if (body.month && !_months.includes(body.month)) 
+      return { statusCode: 400, body: "month is not an acceptable value" }
+    else month = body.month
 
-  if (!body.year)   return { statusCode: 400, body: "missing year" }
-  if (Number.parseInt(body.year) < 2022) return { statusCode: 400, body: "year needs to be a number larger than 2022" }
-  
-  const b = {
-    month: body.month as Month,
-    year: Number.parseInt(body.year)
+    if (body.year && Number.parseInt(body.year) < now.getFullYear()) 
+      return { statusCode: 400, body: `year needs to be a number larger than or equal to ${now.getFullYear()}` }
+    else year = Number.parseInt(body.year)
   }
+  
+  if (!month) { month = "Jaunuary" }
+  if (!year) {
+    if (now.getMonth() > 4) year = now.getFullYear()+1 
+    else year = now.getFullYear()
+  }
+
+  console.log(`updateSchedule month: ${month}, year: ${year}`)
 
   const config = {} as SecretsManagerClientConfig
   const smc = new SecretsManagerClient(config)
@@ -73,7 +82,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
       let insta = [] as PostRequirment[]
 
       // First pass is about indexing rows and storing them into memory.
-      let mem = { year: b.year, month: b.month, day: 0, count: 0 } as { year: number, month: Month, day: number, count: number }
+      let mem = { year, month, day: 0, count: 0 } as { year: number, month: Month, day: number, count: number }
       console.log(`START MEM: ${JSON.stringify(mem, null, 2)}`)
 
       const grid = masterTab.data![0] // should only be one, since we always submit only 1 range
@@ -86,7 +95,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
           // Check: this is a valid row for parsing & skips rows that happen before our month.
           if (
             r.values && r.values[headers.Month].effectiveValue?.stringValue && r.values[headers.Day].effectiveValue?.numberValue &&
-            _months.indexOf(b.month) <=_months.indexOf(r.values[headers.Month].effectiveValue?.stringValue! as Month)
+            _months.indexOf(month) <=_months.indexOf(r.values[headers.Month].effectiveValue?.stringValue! as Month)
           ) {
             let count = getPrimeTimesPerWeekDayDiff(
               { year: mem.year, month: _months.indexOf(mem.month), day: mem.day },
@@ -119,7 +128,7 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
         if (i === 0) { continue /** skip first row */ }
         if (
           r.values && r.values[headers.Month].effectiveValue?.stringValue && r.values[headers.Day].effectiveValue?.numberValue &&
-          _months.indexOf(b.month) < _months.indexOf(r.values[headers.Month].effectiveValue?.stringValue! as Month)
+          _months.indexOf(month) < _months.indexOf(r.values[headers.Month].effectiveValue?.stringValue! as Month)
         ) {
           let count = getPrimeTimesPerWeekDayDiff(
             { year: mem.year, month: _months.indexOf(mem.month), day: mem.day },
@@ -145,12 +154,12 @@ export const handler = async (event: any): Promise<{statusCode: number, body: st
       }
 
       console.log(`=== Facebook Schedule === `)
-      const schedule1 = generateSchedule({year: b.year, month: _months.indexOf(b.month), day: 1}, mem.count, fb)
+      const schedule1 = generateSchedule({year, month: _months.indexOf(month), day: 1}, mem.count, fb)
       console.log(`=== Facebook Schedule === `)
       console.log(schedule1)
 
       console.log(`=== Instagram Schedule === `)
-      const schedule2 = generateSchedule({year: b.year, month: _months.indexOf(b.month), day: 1}, mem.count, insta)
+      const schedule2 = generateSchedule({year, month: _months.indexOf(month), day: 1}, mem.count, insta)
       console.log(`=== Instagram Schedule === `)
       console.log(schedule2)
 
@@ -278,6 +287,7 @@ const createDrillDownTabs = async (
     posts: (Itinerary|EmptyItinerary)[], platform: "FaceBook" | "Instagram" 
   }[]
 ): Promise<{ statusCode: number, body: string }> => {
+  const now = new Date()
   const len = dds[0].posts.length
   for (const dd of dds) { 
     if (dd.posts.length !== len) { 
@@ -305,9 +315,10 @@ const createDrillDownTabs = async (
 
   for (let i=0; i<len; i++) {
     const sheetTitle = `${currentMonth}${currentYear}`
+    if (currentYear < now.getFullYear()) { console.log(`we wont be creating the following sheet since its less than todays year ${now.getFullYear()} : ${sheetTitle}`); continue }
     if ( currentYear !== dds[0].posts[i].postDate.year || currentMonth !== dds[0].posts[i].postDate.month) {
       if (tabsInventory[sheetTitle]) {
-        console.log(`No need to delete ${sheetTitle} for now,`)
+        console.log(`No need to delete ${sheetTitle} for now.`)
       } else {
         await client.spreadsheets.batchUpdate({
           spreadsheetId: _spreadsheet,
@@ -326,7 +337,7 @@ const createDrillDownTabs = async (
         valueInputOption: "USER_ENTERED",
         range: `${sheetTitle}!A1:${_alphabet.charAt(_headersDrillDown.length-1)}${values.length}`,
         requestBody: { values },
-      }) )
+      }) );
 
       /** Reset currentMonth / currentYear */
       currentMonth = dds[0].posts[i].postDate.month, currentYear = dds[0].posts[i].postDate.year 
@@ -355,7 +366,3 @@ const createDrillDownTabs = async (
 
   return { statusCode: 200, body: "OK" }
 }
-
-
-
-

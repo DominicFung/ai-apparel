@@ -13,7 +13,7 @@ import { Product } from '../../../types/product'
 import { MockUploadToPrintifyRequest, MockUploadToPrintifyResponse, PrintifyMockRequest, PrintifyMockResponse, VariantResponse } from '../../../types/printify'
 import { CustomerRequest, CustomerResponse } from '../../../types/customer'
 
-import { getSheetTab, head, _alphabet, _headersDrillDown, _spreadsheet } from './global'
+import { getSheetTab, head, _alphabet, _headersDrillDown, _spreadsheet, sleep } from './global'
 import { auth, sheets, sheets_v4 } from '@googleapis/sheets'
 
 
@@ -118,7 +118,7 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
     // wait for loading to complete
     for (let i=0; i<10; i++) {
       console.log(`Waiting ... ${i}`)
-      await wait(_WAIT_SEC)
+      await sleep(_WAIT_SEC)
       const res4 = (await axios(HOSTAPI+`/api/replicate/stablediffusion/${itemId}`, { headers })).data as AIImageResponse
       if (res4.status === "ERROR") return { statusCode: 500, body: "Image Processing Error" }
       if (res4.status === "COMPLETE") { temp = res4; break }
@@ -132,7 +132,7 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
 
       const _MAX = 10
       for (let k = 0; k < _MAX; k++) {
-        await wait(_WAIT_SEC)
+        await sleep(_WAIT_SEC)
         try {
           const command0 = new HeadObjectCommand({
             Bucket: BUCKET_NAME,
@@ -173,14 +173,20 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
         })).data as PrintifyMockResponse
 
         // Write Images to array
-        exString = `${exString} image${j} = :image${j}`
+        exString = `${exString} image${j} = :image${j},`
         exAttribute[`:image${j}`] = { S: res6.url }
         values.push(`=IMAGE("${res6.url}")`)
 
-        if (j < g.length-1) exString = `${exString}, `
+        //if (j < g.length-1) exString = `${exString}, `
       }
 
       values.push(`=HYPERLINK("${HOSTAPI}/p/${productId}/i/${itemId}")`)
+      exString = `${exString} link = :link`
+      exAttribute[`:link`] = { S: `${HOSTAPI}/p/${productId}/i/${itemId}` }
+
+      console.log(`Update ${TABLE_NAME} with the following: `)
+      console.log(exString)
+      console.log(exAttribute)
 
       await dynamo.send(new UpdateItemCommand({
         TableName: TABLE_NAME,
@@ -213,8 +219,6 @@ export const handler = async (event: APIGatewayEvent): Promise<{statusCode: numb
   }
   return { statusCode: 500, body: "Server Error" }
 }
-
-const wait = (timeToDelay: number) => new Promise((resolve) => setTimeout(resolve, timeToDelay))
 
 const generateRandomUniqueIntegers = (x: number, max: number): number[] => {
   let range = Array.from({length: max}, (_,i) => i)
