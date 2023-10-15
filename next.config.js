@@ -8,6 +8,7 @@ const nextConfig = {
   images: {
     domains: [
       'replicate.delivery',
+      'pbxt.replicate.delivery',
       'aiapparel-s3stack-aiapparelbucket7dbbd1c7-1b3nybqrm38se.s3.amazonaws.com'
     ]
   },
